@@ -1,0 +1,106 @@
+.color-1 {
+  background: green;
+}
+.color-2 {
+  background: orange;
+}
+.color-3 {
+  background: red;
+}
+.color-4 {
+  background: yellow;
+}
+
+.main-wrapper {
+  padding: 5px;
+  width: 500px;
+  margin: auto;
+  background: #263238;
+}
+.component {
+  margin-bottom: 3px;
+}
+.timeline {
+  width: 500px;
+  height: 10px;
+  background-color: #bdbdbd;
+  position: relative;
+}
+.timeline .indicator {
+  display: inline-block;
+  position: absolute;
+  width: 2px;
+  background-color: gray;
+  height: 100%;
+}
+.newEventBtn {
+  font-size: 0.73em;
+  border: 1px solid gray;
+  padding: 5px;
+}
+.events-container {
+  bordser: 1px solid red;
+}
+.events-container .row {
+  position: relative;
+  outline: 1px solid gray;
+  padding: 5px 0 5px 0;
+  width: 500px;
+  height: 20px;
+  background: #c1d5e0;
+}
+.events-container .event-item {
+  position: absolute;
+  padding-left: 5px;
+  min-height: 10px;
+  color: white;
+  dispay: inline-block;
+  font-family: helvetica;
+  font-size: 14px;
+}
+.row .event-item.entered {
+  background-color: orange;
+}
+.row .row-name {
+  display: inline-block;
+  left: -70px;
+  font-weight: strong;
+  position: absolute;
+  text-align: right;
+}
+#mainvideo_html5_api {
+  width: 500px;
+  height: 360px;
+  margin: 10px 0px 10px 0px;
+}
+.event-form-control {
+  border: 1px solid gray;
+  padding: 5px;
+  background: white;
+  position: absolute;
+  z-index: 10;
+  width: 500px;
+}
+.fixed {
+  content: "";
+  clear: "both";
+}
+.editable-content {
+  padding: 0px 5px 0px 5px;
+  border: 1px solid #e0e0e0;
+}
+.event-form-control .clsBtn {
+  float: right;
+  cursor: pointer;
+  margin-right: 0px;
+}
+.event-form-control .addRowCls {
+  cursor: pointer;
+  display: inline-block;
+}
+.content-summary {
+  border: 1px solid red;
+  float: left;
+  width:  550px;
+  height: 500px
+}
