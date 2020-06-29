@@ -116,7 +116,9 @@ export default class ControlPlugin {
                  <span>Tag</span>
                   <div @showIf="!displayRowForm">
                     <select km:model="selectedTag">
-                      <option km:foreach="item in rowTags" renderer="_handleOption">Time Layer...</option>
+                      <option km:foreach="item in rowTags" renderer="_handleOption">
+                        Patrov {item} options!
+                      </option>
                     </select>
                     <span class="addRowCls" @click="showRowForm">[+]</span>
                   </div>

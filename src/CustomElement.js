@@ -44,7 +44,7 @@ class CustomElement {
         _handleTarget(this, params)
         _handleProps(this, params)
         Object.assign(this, {}, params)
-        //DomDataBinding.applyMixin(this)
+        DomDataBinding.applyMixin({target: this, skipRoot: true})
         this.onInit()
     }
    

@@ -1,6 +1,6 @@
 import DomDataBinding from "./DomDataBinding";
 import CustomElement from "./CustomElement"
-import { parse as templateParser} from "./TemplateHelper"
+import { parse as templateParser} from "./TemplateHelpers"
 
 DomDataBinding.registerDirective("event", {
   init: (ctx, { node, value, modifier }) => {
@@ -50,43 +50,57 @@ DomDataBinding.registerDirective("showif", {
 DomDataBinding.registerDirective("foreach", {
   
   init: function(ctx, { node, value  }) {
-    
     const itemReg = /(\w+)\sin\s(\w+)/gi;
     const rst = itemReg.exec(value);
-    
+    const nodeType = node.tagName; 
     const [_, itemKey, sourceVariable] = rst;
     const parentNode = node.parentNode;
-    
     /** handle list -> handle template node */
-    const listHandler = function() {
-      const itemList = ctx.target.data[sourceVariable];
-      const fragment = document.createDocumentFragment()
-      const clonedNode = node.cloneNode(true)
-      const { render } = templateParser(clonedNode)
-      itemList.map(item => { 
-        const node = render({ [itemKey]: item, clone: true, ctx})
-        fragment.appendChild(node)
-      })
-      node.replaceWith(fragment)
-      //ctx.addParts(fragment)
-     } 
+    
+    const createListandler = function(params) {
 
-    ctx.signals.dataChanged.connect((key, value, oldValue) => {
+        return function() {
+          const {context, values, sourceVariable, itemKey} = params
+          let itemList = []
+          
+          itemList = context.target.data[sourceVariable] || values;
+          if (!itemList) { return }
+          if (nodeType === "OPTION") {
+            node.innerHTML = ""
+            itemList.map((value) => {
+              const option = document.createElement(nodeType)
+              option.innerHTML = value
+              parentNode.appendChild(option)
+            })
+          } else {
+            const fragment = document.createDocumentFragment()
+            const clonedNode = node.cloneNode(true)
+            const { render } = templateParser(clonedNode)
+
+            itemList.map(item => {
+              const node = render({ [itemKey]: item, clone: true, ctx})
+              fragment.appendChild(node)
+            })
+            node.replaceWith(fragment)
+            //ctx.addParts(fragment) //force parsing
+          }
+        }
+     }
+
+    /* handle list changes */ 
+    ctx.signals.dataChanged.connect((key, value) => {
       if (key !== sourceVariable) {
         return false;
       }
-      const itemList = ctx.target.data[sourceVariable];
-      /* render computation --> promesse de changement */
-      const [ modelDir ] = ctx.getDirectives(parentNode, ["model"]) 
-      const computation = (function() {
-        return (params) => {
-
-        }
-      }, ctx)
-
-      /* do later */
-      ctx.queued(computation)
+      const listHandler = createListandler({context:ctx, itemKey:key, values:value})
+      ctx.queued(listHandler)
     });
+  try { 
+    ctx.queued(createListandler({context:ctx, sourceVariable, itemKey}))
+  } catch (reason) {
+    console.log("-- reason --")
+    console.log(reason)
+  }
   }
 });
 

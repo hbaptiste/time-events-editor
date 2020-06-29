@@ -1,6 +1,6 @@
 import Signal from "./Signal";
 import CustomElement from "./CustomElement"
-import {createWalker} from "./TemplateHelper"
+import {createWalker} from "./TemplateHelpers"
 
 // https://github.com/patrick-steele-idem/morphdom/tree/fe35db9adda1f22fe5856e8e0f78048f8f4b0f18/examples/lifecycle-events
 
@@ -19,7 +19,7 @@ class UITaskQueue {
     while (this.queue.length) {
       const { task, status } = this.queue.pop()
       if (status === this.status.DONE || typeof task !== "function") { continue }
-      try { task() } catch (reason) { console.log(reason) } //for now perform actual change...
+      try { task() } catch (reason) { console.log(reason) } //for now perform
     }
   }
   start() {
@@ -36,8 +36,9 @@ class UITaskQueue {
 export default class DomDataBinding {
   static directivesList = [];
 
-  static applyMixin = function(target) {
-    return DomDataBinding.create(target)
+  static applyMixin = function(params) {
+    
+    return DomDataBinding.create(params)
   }
 
   static create = function(params) {
@@ -52,7 +53,9 @@ export default class DomDataBinding {
     };
     this.context = "km";
     if (params && typeof params === "object") {
-      this.target = params
+      const { target, skipRoot } = params
+      this.target = target || params
+      this.skipRoot = skipRoot || false
     }
   }
 
@@ -70,14 +73,15 @@ export default class DomDataBinding {
 
   _parseAll() {
     console.log("inside _parseAll_")
+
     const { walker, skip } = createWalker({ 
       root: this.target.root, 
       filter: NodeFilter.SHOW_ELEMENT 
     })
+   
     walker((node) => {
-     const { type } = this._handleParts(node)
-     console.log(`Type ${type}!`)
-     if (type === 1) { skip() } //component node
+        const { type } = this._handleParts(node)
+        if (type === 1) { skip() }
     })
   }
   /* directives and components */
@@ -132,7 +136,9 @@ export default class DomDataBinding {
           if (initialProps.hasOwnProperty(key)) {
             const prevValue = this.__observedProps[key];
             this.__observedProps[key] = value;
-            this.signals.propsChanged.emit(key, value, prevValue); 
+            /* no need */
+            //this.signals.propsChanged.emit(key, value, prevValue);
+            this.signals.dataChanged.emit(key, value, prevValue);
           }
         }
       })
@@ -155,7 +161,7 @@ export default class DomDataBinding {
 
     textNodes.forEach((textSource) => {
       const textContent = textSource.textContent.trim()
-      const execPattern = new RegExp('{[a-zA-Z0-9_]+}','g')
+      const execPattern = new RegExp('{.*?}','g')
       let result
       const strings = []
       let nextStart = 0
@@ -213,10 +219,7 @@ export default class DomDataBinding {
     if (!directive || typeof directive.init != "function") {
       throw "Directive not Found!";
     }
-    console.log("___ applyDirective ___")
-    console.log(ctx.target)
-    console.log(directiveConfig)
-    console.log("_____________________")
+    
     directive.init(ctx, directiveConfig);
   }
 
@@ -270,14 +273,16 @@ export default class DomDataBinding {
         .filter(isUndefined)
       }      
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives]
+    //console.log("--- radical ---")
+    //console.log(allDirectives)
     allDirectives.map((directive) => {
-        try {
-            this.applyDirective({ ctx: this, directiveConfig: directive })
-        } catch(reason) {
-          console.log("------- / directive error / ------")
-          console.log(reason)
-        }
-      })
+      try {
+          this.applyDirective({ ctx: this, directiveConfig: directive })
+      } catch(reason) {
+        console.log("------- / directive error / ------")
+        console.log(reason)
+      }
+    })
   }
   
   _parseAttrProps(attr) {

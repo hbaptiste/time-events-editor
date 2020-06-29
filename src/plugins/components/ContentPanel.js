@@ -17,6 +17,7 @@ CustomElement.register({
     },
 
     onInit: function() {
+        console.log("== messages ==")
         console.log(this.messages)
     },
 
@@ -37,13 +38,14 @@ CustomElement.register({
        return `<template>
                 <style>
                     :host {
-                        .radical-test {border: "1px solid red" }
+                        .radical-test { border: "1px solid red" }
                     }
                 </style>
                 <div style="border: 1px solid red">
                     <p @click="sayHello" class='radical-test'> My title: {title}!</p>
                     <ul class="main-list-wrapper">
                         <li km:foreach="item in messages">
+                            <p>mon titre->{title}</p>
                             <p>duration { item.duration | handleDuration }</p>
                             <p><em>Type : {item.type}</em>!</pw x>
                             <p @click="sayHello">content: {item.data.content}!</p> 
