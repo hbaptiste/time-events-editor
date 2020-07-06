@@ -54,20 +54,22 @@ DomDataBinding.registerDirective("foreach", {
     const rst = itemReg.exec(value);
     const nodeType = node.tagName; 
     const [_, itemKey, sourceVariable] = rst;
+   
     const parentNode = node.parentNode;
     /** handle list -> handle template node */
     
     const createListandler = function(params) {
-
+        
         return function() {
           const {context, values, sourceVariable, itemKey} = params
-          let itemList = []
+          let dataList = []
           
-          itemList = context.target.data[sourceVariable] || values;
-          if (!itemList) { return }
+          dataList = context.target.data[sourceVariable] || values;
+          if (!dataList) { return }
           if (nodeType === "OPTION") {
+            parentNode.innerHTML = ""
             node.innerHTML = ""
-            itemList.map((value) => {
+            dataList.map((value) => {
               const option = document.createElement(nodeType)
               option.innerHTML = value
               parentNode.appendChild(option)
@@ -77,8 +79,8 @@ DomDataBinding.registerDirective("foreach", {
             const clonedNode = node.cloneNode(true)
             const { render } = templateParser(clonedNode)
 
-            itemList.map(item => {
-              const node = render({ [itemKey]: item, clone: true, ctx})
+            dataList.map(item => {
+              const node = render({ itemKey, [itemKey]: item, clone: true, ctx})
               fragment.appendChild(node)
             })
             node.replaceWith(fragment)
@@ -92,8 +94,7 @@ DomDataBinding.registerDirective("foreach", {
       if (key !== sourceVariable) {
         return false;
       }
-      const listHandler = createListandler({context:ctx, itemKey:key, values:value})
-      ctx.queued(listHandler)
+      ctx.queued(createListandler({context:ctx, sourceKey:key, itemKey, values:value}))
     });
   try { 
     ctx.queued(createListandler({context:ctx, sourceVariable, itemKey}))

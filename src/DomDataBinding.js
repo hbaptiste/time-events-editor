@@ -81,9 +81,17 @@ export default class DomDataBinding {
    
     walker((node) => {
         const { type } = this._handleParts(node)
-        if (type === 1) { skip() }
+        if (type === 1 ) { skip() }
+        if (this._hasForeach(node)) {
+          skip()//skip children //
+        }
     })
   }
+  _hasForeach(node) {
+    const directives = this.getDirectives(node, ['foreach'])
+    return directives.length
+  }
+
   /* directives and components */
   _handleParts(node) {
     let type = 0
@@ -136,7 +144,7 @@ export default class DomDataBinding {
           if (initialProps.hasOwnProperty(key)) {
             const prevValue = this.__observedProps[key];
             this.__observedProps[key] = value;
-            /* no need */
+            /* no need? */
             //this.signals.propsChanged.emit(key, value, prevValue);
             this.signals.dataChanged.emit(key, value, prevValue);
           }
@@ -256,7 +264,7 @@ export default class DomDataBinding {
     drop = Array.isArray(drop) ? drop : []
     const attributes = node.attributes
     /* experiments */
-    const templateDirectives = this._handleTemplateExpressions(node)
+    // --> skip foreach
     
     /* deal with node directive */
     const isUndefined = (dir) => dir !== undefined
@@ -271,7 +279,11 @@ export default class DomDataBinding {
       parentDirectives = Array.from(parentAttr)
         .map(attr => dparser(attr))
         .filter(isUndefined)
-      }      
+      }
+    
+    let templateDirectives = this._handleTemplateExpressions(node)
+    /* skip foreach directive */
+    
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives]
     //console.log("--- radical ---")
     //console.log(allDirectives)

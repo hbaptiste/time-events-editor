@@ -29,20 +29,20 @@ const parseExpressions = function(node) {
             strings.push(textContent.substring(nextStart))
           }
           if (strings.length != 0) {
-        const { parentNode } = textSource
-        strings.map((item) => {
-          const content = item.startsWith("{") ? "" : item 
-          const textNode = document.createTextNode(content)
-          parentNode.insertBefore(textNode, textSource)
-         if (item.startsWith("{")) {
-          tokens.push({
-             value: item,
-             textNode,
-             ...exp
-           }) 
-         }
-       })
-      parentNode.removeChild(textSource)
+            const { parentNode } = textSource
+            strings.map((item) => {
+                const content = item.startsWith("{") ? "" : item 
+                const textNode = document.createTextNode(content)
+                parentNode.insertBefore(textNode, textSource)
+                if (item.startsWith("{")) {
+                    tokens.push({
+                        value: item,
+                        textNode,
+                        ...exp
+                    }) 
+                }
+            })
+            parentNode.removeChild(textSource)
           }
         }
       })
@@ -88,12 +88,11 @@ const _parseAndToken = function(node) {
         textsNode.push(node)
     })
 }
-const renderTemplate = function(data, context) {
-    const { tokens, node } = data
-    const { ctx } = context
-    console.log(data)
-    console.log("data")
-    console.log("--- data ---")
+const renderTemplate = function(tplContext, data) {
+    const { tokens, node, } = tplContext
+    const { ctx, itemKey } = data
+    const dataItem = {[itemKey] : data[itemKey] }
+
     tokens.map((token) => {
       const { pipes } = token
       const applyPipes = (value) => {
@@ -104,12 +103,23 @@ const renderTemplate = function(data, context) {
           return acc
         }, value)
       }
+
       const val = eval("`${token.exp}`")
+      const escapeVal = '`${' + val + '}`'
       const t = `(function() {
-                    const { item } = context
-                    const val = ${val}
-                    return applyPipes(val)
-                  }())`      
+                    try {
+                        const { ${itemKey} } = dataItem
+                        return applyPipes(${escapeVal})
+                    } catch(e) {
+                      const data = ctx.target["${val}"] || null
+                      if(data) {
+                        return data
+                      } else {
+                        console.log("[${val}] can't be found!")
+                      }
+                    }
+                  }())`
+                
       token.textNode.textContent = eval(t)
     })
     return node.cloneNode(true)

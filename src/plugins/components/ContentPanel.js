@@ -17,8 +17,7 @@ CustomElement.register({
     },
 
     onInit: function() {
-        console.log("== messages ==")
-        console.log(this.messages)
+        this.data.messages = this.messages
     },
 
     hello: () => {
