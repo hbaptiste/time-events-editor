@@ -61,12 +61,9 @@ class CustomElement {
     onOnlink() {} // when the root is removed from the dom
 
     invoke(method, ...params) {
-        console.log("0-> Inside invoke!")
-        console.log(method)
-        if (this[method] !== "function") {
+        if (typeof this[method] !== "function") {
             throw "invoke:wrong parameter type"
         }
-        console.log(`Method-->${method}!`)
         return this[method].apply(this, params)
     }
 

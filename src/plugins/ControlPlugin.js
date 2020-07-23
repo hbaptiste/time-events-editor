@@ -31,9 +31,9 @@ export default class ControlPlugin {
     console.log(this.uiManager.eventsRegistry._parseTime("1m"));
     console.log(this.uiManager.eventsRegistry._parseTime("1h21"));
     const messages = [
-      { type: "Livres", duration:["1m","20m"], data: {type: "text", content: "Le livre de Rolph Throuillot n'a pas été traduit en Français." } },
-      { type: "auteur", duration:["1m","20m"], data: {type: "text", content: "Il s'agit de Surveiller et Punir" } },
-      { type: "Reference", duration:["1m","20m"], data: {type: "text", content: "Le livre de Rolph Throuillot n'a pas été traduit en Français." } }
+      { type: "Livres", duration:["1m","20m"], data: {type: "text", content: "1/ Le livre de Rolph Throuillot n'a pas été traduit en Français." } },
+      { type: "auteur", duration:["1m","20m"], data: {type: "text", content: "2/ Il s'agit de Surveiller et Punir" } },
+      { type: "Reference", duration:["1m","20m"], data: {type: "text", content: "3/ Le livre de Rolph Throuillot n'a pas été traduit en Français." } }
       ]
    DomDataBinding.create({
       root: ctlContainer,
@@ -68,6 +68,16 @@ export default class ControlPlugin {
           data.rowTags = [data.newRowName, ...data.rowTags];
           data.displayRowForm = false;
           data.selectedTag = data.newRowName //handle domChange
+          /* add new messages */
+          const message = this._createMessage()
+          console.log(message)
+        },
+        _createMessage: function() {
+          return Object.create({
+            type: "test",
+            duration: [],
+            data: {type:"audio", "content":"/sd/sd/sd.mp3"}
+          })
         },
 
         _handleTagChange: function(data, e) {
@@ -88,6 +98,7 @@ export default class ControlPlugin {
           
           eventRecord.rowName = selectedTag;
           data.displayEventForm = false;
+          console.log(eventRecord)
           this.uiManager.eventsRegistry.createEventFromData(eventRecord);
         },
         reset: function() {},

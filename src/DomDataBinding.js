@@ -1,31 +1,41 @@
 import Signal from "./Signal";
 import CustomElement from "./CustomElement"
-import {createWalker} from "./TemplateHelpers"
+import {createWalker, setNodeTemplate} from "./TemplateHelpers"
 
 // https://github.com/patrick-steele-idem/morphdom/tree/fe35db9adda1f22fe5856e8e0f78048f8f4b0f18/examples/lifecycle-events
-
+const FOREACH_DIRECTIVE = "foreach"
 class UITaskQueue {
   constructor() {
     this.queue = []
-    this.status = {TO_DO:0, DONE: 1}
+    this.statusList = {TO_DO: 0, DONE: 1, RUNNING: 2, STOP: 3}
+    this.queueStatus = this.statusList.STOP
   }
-  add(uiTask) {
-    this.queue.push({task: uiTask, status: this.status.TO_DO})
-  }
-  commit() {
-    if (!this.queue.length) { return }
-    /* notion de transaction */
-    /* do nothing from now */
-    while (this.queue.length) {
-      const { task, status } = this.queue.pop()
-      if (status === this.status.DONE || typeof task !== "function") { continue }
-      try { task() } catch (reason) { console.log(reason) } //for now perform
+
+  add(uiTask, forceCommit = false) {
+    this.queue.push({task: uiTask, status: this.statusList.TO_DO})
+    if (forceCommit) {
+      if (this.queueStatus !== this.statusList.RUNNING) {
+        this.commit()
+      }
     }
   }
+
+  commit() {
+    /* notion de transaction */
+    /* do nothing from now */
+    this.queueStatus = this.statusList.RUNNING
+    while (this.queue.length) {
+      const { task, status } = this.queue.pop()
+      if (status === this.statusList.DONE || typeof task !== "function") { continue }
+      try { task() } catch (reason) { console.log(reason) } //for now perform
+    }
+    this.queueStatus = this.statusList.STOP
+  }
+
   start() {
-    setInterval(() => {
+    setTimeout(() => {
       this.commit()
-    }, 100)
+    }, 0)
   }
 
   reset() {
@@ -74,7 +84,7 @@ export default class DomDataBinding {
   _parseAll() {
     console.log("inside _parseAll_")
 
-    const { walker, skip } = createWalker({ 
+    const { walker, skip } = createWalker({
       root: this.target.root, 
       filter: NodeFilter.SHOW_ELEMENT 
     })
@@ -83,7 +93,7 @@ export default class DomDataBinding {
         const { type } = this._handleParts(node)
         if (type === 1 ) { skip() }
         if (this._hasForeach(node)) {
-          skip()//skip children //
+          skip()
         }
     })
   }
@@ -285,14 +295,17 @@ export default class DomDataBinding {
     /* skip foreach directive */
     
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives]
-    //console.log("--- radical ---")
-    //console.log(allDirectives)
+    
     allDirectives.map((directive) => {
       try {
-          this.applyDirective({ ctx: this, directiveConfig: directive })
+
+        if (directive.name === FOREACH_DIRECTIVE) {
+          setNodeTemplate(node)
+        }
+        this.applyDirective({ ctx: this, directiveConfig: directive })
       } catch(reason) {
-        console.log("------- / directive error / ------")
-        console.log(reason)
+          console.log("------- / directive error / ------")
+          console.log(reason)
       }
     })
   }

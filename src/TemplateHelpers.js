@@ -1,3 +1,37 @@
+const templateRecords = new Map()
+const renderedItemsRecords = new Map()
+
+const getId = (function(prefix='item') {
+  let counter = 0
+  return function() {
+    counter++
+    return `${prefix}_${counter}${counter + 1}`
+  }
+}())
+
+/* Radical blaze */
+const setNodeTemplate = function(node) {
+  const key = getId()
+  templateRecords.set(key, node)
+  node.setAttribute('data-template-key', key)
+  return { key }
+}
+
+const setRenderedItems = function(key, items) {
+  if (Array.isArray(items)) {
+    renderedItemsRecords.set(key, items)  
+  }
+}
+
+const getRenderedItems = function(key) {
+  return renderedItemsRecords.get(key) || []
+}
+
+const getNodeTemplate = function(node) {
+  const key = node.getAttribute('data-template-key')
+  return templateRecords.get(key)
+}
+
 
 const parseExpressions = function(node) {
     const { walker } = createWalker({ root: node, filter: NodeFilter.SHOW_TEXT })
@@ -89,7 +123,7 @@ const _parseAndToken = function(node) {
     })
 }
 const renderTemplate = function(tplContext, data) {
-    const { tokens, node, } = tplContext
+    const { tokens, node } = tplContext
     const { ctx, itemKey } = data
     const dataItem = {[itemKey] : data[itemKey] }
 
@@ -105,24 +139,29 @@ const renderTemplate = function(tplContext, data) {
       }
 
       const val = eval("`${token.exp}`")
-      const escapeVal = '`${' + val + '}`'
       const t = `(function() {
                     try {
                         const { ${itemKey} } = dataItem
-                        return applyPipes(${escapeVal})
-                    } catch(e) {
+                        const val = ${token.exp}
+                        if (token.pipes.length) {
+                          return applyPipes(val)
+                        }
+                        return val
+                      } catch(e) {
                       const data = ctx.target["${val}"] || null
-                      if(data) {
+                      if (data) {
                         return data
                       } else {
                         console.log("[${val}] can't be found!")
                       }
                     }
                   }())`
-                
+                console.log(t)
       token.textNode.textContent = eval(t)
     })
-    return node.cloneNode(true)
+    const  t = document.createElement(node.tagName)
+    t.innerHTML = node.innerHTML
+    return t
 }
 
 const createWalker = function(params) {
@@ -159,4 +198,12 @@ const createWalker = function(params) {
 
 
 
-export { parse, renderTemplate, createWalker }
+export { 
+  parse, 
+  renderTemplate, 
+  createWalker, 
+  getNodeTemplate, 
+  setNodeTemplate,
+  setRenderedItems,
+  getRenderedItems
+}

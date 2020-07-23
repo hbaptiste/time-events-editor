@@ -1,6 +1,17 @@
 import DomDataBinding from "./DomDataBinding";
 import CustomElement from "./CustomElement"
-import { parse as templateParser} from "./TemplateHelpers"
+import { parse as templateParser, setRenderedItems, getRenderedItems } from "./TemplateHelpers"
+
+/* counter */
+const getCounter = (function() {
+  let prefix = "counter"
+  let counter = 0
+  return function() {
+    counter++
+    return `${prefix}_${counter}`
+  }
+}())
+
 
 DomDataBinding.registerDirective("event", {
   init: (ctx, { node, value, modifier }) => {
@@ -9,7 +20,7 @@ DomDataBinding.registerDirective("event", {
     if (typeof callback !== "function") {
       throw `@event:${eventName} -> callback must be a function!`;
     }
-    node.addEventListener(eventName, callback.bind(this, ctx.target.data));
+    node.addEventListener(eventName, callback.bind(ctx, ctx.target.data));
   }
 });
 
@@ -17,9 +28,10 @@ DomDataBinding.registerDirective("click", {
   init: function(ctx, { node, value }) {
     const callback = ctx.target.events[value];
     if (typeof callback !== "function") {
-      throw "@click -> callback must be a function!";
+      throw `@click [${value}] -> callback must be a function!`;
     }
-    node.addEventListener("click", callback.bind(this, ctx.target.data));
+
+    node.addEventListener("click", callback.bind(ctx.target, ctx.target, ctx.target.data));
   }
 });
 
@@ -55,16 +67,16 @@ DomDataBinding.registerDirective("foreach", {
     const nodeType = node.tagName; 
     const [_, itemKey, sourceVariable] = rst;
    
-    const parentNode = node.parentNode;
-    /** handle list -> handle template node */
+    let parentNode = node.parentNode;
+    const templateKey = node.dataset.templateKey
     
-    const createListandler = function(params) {
-        
+
+    const createListHandler = function(params) {
         return function() {
           const {context, values, sourceVariable, itemKey} = params
           let dataList = []
-          
           dataList = context.target.data[sourceVariable] || values;
+
           if (!dataList) { return }
           if (nodeType === "OPTION") {
             parentNode.innerHTML = ""
@@ -75,29 +87,61 @@ DomDataBinding.registerDirective("foreach", {
               parentNode.appendChild(option)
             })
           } else {
+            const previousList = getRenderedItems(templateKey) // make diff
+            let target = null, rest = []
+            /* clean previous */
+            if (previousList.length > 0 && (dataList.length !== 0)) {
+              [target,...rest] = previousList
+              rest.map(item => {
+                item.parentNode.removeChild(item)
+              })
+            }
+           
             const fragment = document.createDocumentFragment()
-            const clonedNode = node.cloneNode(true)
+            const clonedNode = document.createElement(node.tagName)
+            clonedNode.innerHTML = node.innerHTML
             const { render } = templateParser(clonedNode)
+            const renderedList = []
 
             dataList.map(item => {
-              const node = render({ itemKey, [itemKey]: item, clone: true, ctx})
-              fragment.appendChild(node)
+              const nodeItem = render({itemKey, [itemKey]: item, clone: true, ctx})
+              nodeItem._id = getCounter()
+              nodeItem._parentNode = parentNode 
+              fragment.appendChild(nodeItem)
+              renderedList.push(nodeItem)
             })
-            node.replaceWith(fragment)
-            //ctx.addParts(fragment) //force parsing
+    
+            let placeholder = target || node
+            
+            if (renderedList.length === 0 && parentNode.contains(node)) {
+                placeholder = document.createElement("template")
+                parentNode.insertBefore(placeholder, node) // li -> template
+                parentNode.removeChild(node)
+                renderedList.push(placeholder)
+            } else {
+              parentNode.insertBefore(fragment, placeholder)
+              parentNode.removeChild(placeholder)
+            }
+            
+            setRenderedItems(templateKey, renderedList)
+            //ctx.addParts(fragment)
+            // force parsing handle subcomponents
+            // parse directive apply event delegation
           }
         }
      }
 
     /* handle list changes */ 
     ctx.signals.dataChanged.connect((key, value) => {
+
       if (key !== sourceVariable) {
         return false;
       }
-      ctx.queued(createListandler({context:ctx, sourceKey:key, itemKey, values:value}))
+      createListHandler({context: ctx, sourceKey: key, itemKey, values: value})()
     });
   try { 
-    ctx.queued(createListandler({context:ctx, sourceVariable, itemKey}))
+      const func = () => {}
+    ctx.queued(func/*createListHandler({context:ctx, sourceVariable, itemKey})*/)
   } catch (reason) {
     console.log("-- reason --")
     console.log(reason)
