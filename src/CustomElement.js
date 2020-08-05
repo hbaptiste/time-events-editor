@@ -25,7 +25,8 @@ const _handleTarget = function(component, params) {
     wrapper.innerHTML = params.getTemplate().trim()
     const template = wrapper.firstChild
     if (template.tagName !== "TEMPLATE") {
-        return false 
+        console.log(params)
+        throw new Error(`TemplateTagMissing for ${params.is}!`)
     }
     /* deal with slot --> target content */
     target.innerHTML = ""
@@ -44,8 +45,9 @@ class CustomElement {
         _handleTarget(this, params)
         _handleProps(this, params)
         Object.assign(this, {}, params)
-        DomDataBinding.applyMixin({target: this, skipRoot: true})
+        this.$binding = DomDataBinding.applyMixin({target: this, skipRoot: true})
         this.onInit()
+        this.declareSideEffects()
     }
    
     sendMessage(message, payload) {
@@ -66,6 +68,23 @@ class CustomElement {
         }
         return this[method].apply(this, params)
     }
+    
+    // useful
+    declareSideEffects(){}
+
+    registerSideEffects( func, deps) {
+        func = func.bind(this)
+        this.$binding.signals.dataChanged.connect((key) => {
+            if (deps.includes(key)) {
+                const values = deps.map( dep => this.data[dep] )
+                func(...values)
+            }
+        })
+        /* -- first call -- */
+        const values = deps.map( dep => this.data[dep] ) 
+        func(...values)
+    }
+
 
     static create(params) {
         return new CustomElement(params)

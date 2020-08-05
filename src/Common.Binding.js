@@ -12,6 +12,9 @@ const getCounter = (function() {
   }
 }())
 
+/** 
+ * renderIf
+ * */
 
 DomDataBinding.registerDirective("event", {
   init: (ctx, { node, value, modifier }) => {
@@ -36,6 +39,7 @@ DomDataBinding.registerDirective("click", {
 });
 
 DomDataBinding.registerDirective("showif", {
+
   init: function(ctx, { node, value }) {
     const keyValue = value.replace("!", "");
     const ifExpr = `(function() {
@@ -45,15 +49,18 @@ DomDataBinding.registerDirective("showif", {
     const funct = eval(ifExpr);
     /* use a generic parser to handle expression boolean | variable | expression */
     const getCallback = function(node, fieldKey, expFunc) {
+      
       return function(key, value) {
         if (fieldKey !== key) {
           return false;
         }
         const displayValue = expFunc() === false ? "none" : "";
+        
         node.style.display = displayValue;
       };
     };
     const callback = getCallback(node, keyValue, funct);
+
     ctx.signals.dataChanged.connect(callback);
   }
 });
@@ -90,13 +97,13 @@ DomDataBinding.registerDirective("foreach", {
             const previousList = getRenderedItems(templateKey) // make diff
             let target = null, rest = []
             /* clean previous */
-            if (previousList.length > 0 && (dataList.length !== 0)) {
+            if (previousList.length > 0) {
               [target,...rest] = previousList
               rest.map(item => {
                 item.parentNode.removeChild(item)
               })
             }
-           
+
             const fragment = document.createDocumentFragment()
             const clonedNode = document.createElement(node.tagName)
             clonedNode.innerHTML = node.innerHTML
@@ -112,15 +119,21 @@ DomDataBinding.registerDirective("foreach", {
             })
     
             let placeholder = target || node
-            
-            if (renderedList.length === 0 && parentNode.contains(node)) {
-                placeholder = document.createElement("template")
-                parentNode.insertBefore(placeholder, node) // li -> template
+            const emptyPlaceHolder = document.createElement("template")
+            // --> si vide
+            if (!renderedList.length) { 
+              if (parentNode.contains(node)) {
+                parentNode.insertBefore(emptyPlaceHolder, node) // li -> template
                 parentNode.removeChild(node)
-                renderedList.push(placeholder)
+              } else {
+                parentNode.insertBefore(emptyPlaceHolder, placeholder)
+                parentNode.removeChild(placeholder) // --> nice
+              }
+              renderedList.push(emptyPlaceHolder)
             } else {
               parentNode.insertBefore(fragment, placeholder)
               parentNode.removeChild(placeholder)
+              ctx.addParts(renderedList,params)
             }
             
             setRenderedItems(templateKey, renderedList)
@@ -163,7 +176,7 @@ DomDataBinding.registerDirective("model", {
         const computation = function() {
           const options = Array.from(node.options).map(option => option.value)
           const index = options.indexOf(keyValue)
-          if (index !=-1) {
+          if (index !== -1) {
             node.selectedIndex = index
           }
         }

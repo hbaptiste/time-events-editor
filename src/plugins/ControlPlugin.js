@@ -31,15 +31,16 @@ export default class ControlPlugin {
     console.log(this.uiManager.eventsRegistry._parseTime("1m"));
     console.log(this.uiManager.eventsRegistry._parseTime("1h21"));
     const messages = [
-      { type: "Livres", duration:["1m","20m"], data: {type: "text", content: "1/ Le livre de Rolph Throuillot n'a pas été traduit en Français." } },
-      { type: "auteur", duration:["1m","20m"], data: {type: "text", content: "2/ Il s'agit de Surveiller et Punir" } },
-      { type: "Reference", duration:["1m","20m"], data: {type: "text", content: "3/ Le livre de Rolph Throuillot n'a pas été traduit en Français." } }
+      { type: "Livres", samples:["Radical","Event One"], duration:["1m","20m"], data: {type: "text", content: "1/ Le livre de Rolph Throuillot n'a pas été traduit en Français." } },
+      { type: "auteur", samples:['Radical blaze',"Indeed"], duration:["1m","20m"], data: {type: "text", content: "2/ Il s'agit de Surveiller et Punir" } },
+      { type: "Reference", samples:["Sensible","Temps"], duration:["1m","20m"], data: {type: "text", content: "3/ Le livre de Rolph Throuillot n'a pas été traduit en Français." } }
       ]
    DomDataBinding.create({
       root: ctlContainer,
       data: {
         displayEventForm: false,
         displayRowForm: false,
+        displayEventsList: false,
         newRowName: "",
         eventName: "",
         eventStart: "",
@@ -63,14 +64,12 @@ export default class ControlPlugin {
           data.displayRowForm = true;
         },
 
-        createNewRow: function(data, e) {
+        createNewRow: function({data}, e) {
+    
           //prevent from adding the same name
           data.rowTags = [data.newRowName, ...data.rowTags];
           data.displayRowForm = false;
-          data.selectedTag = data.newRowName //handle domChange
-          /* add new messages */
-          const message = this._createMessage()
-          console.log(message)
+          data.selectedTag = data.newRowName // handle domChange
         },
         _createMessage: function() {
           return Object.create({
@@ -88,11 +87,14 @@ export default class ControlPlugin {
           console.log("current time is " + time )
         },
 
-        showEventForm: (data, e) => {
+        showEventForm: ({data}, e) => {
           data.displayEventForm = true;
         },
 
-        createEvent: (data) => {
+        createEvent: ({data}) => {
+          console.log(" createEvent --> radical")
+          console.log(data)
+         return 
           const { eventContent, eventName, eventStart, eventEnd, selectedTag } = data;
           const eventRecord = Object.assign({}, { eventContent, eventName, eventStart, eventEnd });
           
@@ -101,13 +103,14 @@ export default class ControlPlugin {
           console.log(eventRecord)
           this.uiManager.eventsRegistry.createEventFromData(eventRecord);
         },
+
         reset: function() {},
-        close: function(data, evt) {
+        
+        close: function({data}, evt) {
           data.displayEventForm = false;
         }
-      
-      
-      },
+
+      }
 
     });
   }
@@ -150,11 +153,12 @@ export default class ControlPlugin {
                     <div>
                       <textarea km:model="eventContent">This is my content...</textarea>
                     </div>
-                 </div>
-                 <p><button @click="createEvent" id="createBtn">Créer</button></p>
+                </div>
+                <p><button @click="createEvent" id="createBtn">Créer</button></p>
                </div>
-               <content-panel title="Radical blaze title!" $messages="messages" $on-select="_handleItemSelection"></content-panel>
-           </div>
+               <events-viewer $events="messages"></events-viewer>
+               <content-panel @showIf="displayEventsList" title="Radical blaze title!" $messages="messages" $on-select="_handleItemSelection"></content-panel>
+               </div>
             `;
     return eventTpl;
   }

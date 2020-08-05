@@ -23,7 +23,7 @@ export default class Signal {
         var args = Array.from(arguments);
         func.apply(this, [...args]);
       } catch (reason) {
-        console.log(reason);
+        throw reason; //catch
       }
     });
   }

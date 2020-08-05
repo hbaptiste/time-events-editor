@@ -74,18 +74,20 @@ export default class DomDataBinding {
     this._watchProps()
     this._watchData();
     this.uiTaskQueue.start()
+    return this;//expose proper api
   }
 
   addParts(root) {
-    console.log("-- radical --")
-    console.log(root)
+    const rootFragment = document.createElement("div")
+    rootFragment.appendChild(root)
+    console.log(rootFragment)
+    this._parseAll(rootFragment)
   }
 
-  _parseAll() {
-    console.log("inside _parseAll_")
-
+  _parseAll(root = null) {
+    console.log(root)
     const { walker, skip } = createWalker({
-      root: this.target.root, 
+      root: root || this.target.root, 
       filter: NodeFilter.SHOW_ELEMENT 
     })
    
@@ -93,6 +95,8 @@ export default class DomDataBinding {
         const { type } = this._handleParts(node)
         if (type === 1 ) { skip() }
         if (this._hasForeach(node)) {
+          console.log("=====/radi/cal/ =====")
+          console.log(node)
           skip()
         }
     })
@@ -107,6 +111,7 @@ export default class DomDataBinding {
     let type = 0
     if (CustomElement.hasAcustomDefinition(node.tagName)) {
       this.initComponent(node.tagName, node)
+      this.updateDirective(node) // watch other
       type = 1
     } else {
       this.updateDirective(node)
@@ -155,7 +160,7 @@ export default class DomDataBinding {
             const prevValue = this.__observedProps[key];
             this.__observedProps[key] = value;
             /* no need? */
-            //this.signals.propsChanged.emit(key, value, prevValue);
+            this.signals.propsChanged.emit(key, value, prevValue);
             this.signals.dataChanged.emit(key, value, prevValue);
           }
         }
@@ -170,7 +175,7 @@ export default class DomDataBinding {
   }
 
   /* N'est executé qu'une fois */
-  /* comment prendre en compte des sous-documents -> sous domaine*/ 
+  /* comment prendre en compte des sous-documents -> sous domaine */ 
   
   _handleTemplateExpressions(node) {
     const textNodes = Array.from(node.childNodes).filter((node) => node.nodeType === 3)
@@ -209,11 +214,10 @@ export default class DomDataBinding {
      })
     parentNode.removeChild(textSource)
     }
-   
-      
     })
     return directives
   }
+
 
   initComponent(componentName, target) {
     /* 1. watch props */
@@ -262,7 +266,6 @@ export default class DomDataBinding {
     this.data[value] = null
     setTimeout(() => {
       this.data[value] = oldValue
-      console.log(`inside time-out ${value}-->value`)
     }, 0)
   }
 

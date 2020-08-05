@@ -2,6 +2,7 @@ import DomDataBinding from "./DomDataBinding";
 import _ from "./Common.Binding";
 import ContentPanel from "./plugins/components/ContentPanel"
 import Time from "./plugins/components/Time"
+import EventsViewer from "./plugins/components/EventsViewer"
 import { initEventsFixtures } from "./fixtures";
 import TimelineFactory from "./TimelineFactory";
 import UiManager from "./UiManager";

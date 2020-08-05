@@ -106,7 +106,7 @@ const parseExpressions = function(node) {
     return { 
               render : (context) => {
                 return renderTemplate(data, context) 
-              }
+      }
     }
   }
   const cleanKey = function(key) {
@@ -156,7 +156,6 @@ const renderTemplate = function(tplContext, data) {
                       }
                     }
                   }())`
-                console.log(t)
       token.textNode.textContent = eval(t)
     })
     const  t = document.createElement(node.tagName)
@@ -195,8 +194,40 @@ const createWalker = function(params) {
     return { walker, skip }
 }
 
+/***
+ * - template
+ * <li km:foreach="ev in event.items">
+ *      event {ev.name}!
+ *      tags: <a km=foreach="name is ev.samples">
+ *        {name}
+ *      </a>
+ * </li>
+ * 
+ * - render
+ * <li>
+ *  Livre! tags : <a>Comment</a>,<a>Happy</a>, <a>Matter</a>
+ * </li>
+ * - code
+ *  document.createElement()
+ * 
+ */
+/* template and code builder */
+const tokenize = function(template) {
+  if (!template || template.length) { return [] }
+}
 
-
+/* scan the template string */
+class Scanner {
+  
+  constructor(string) {
+    this.string = string
+    this.tail = string
+    this.pos = 0
+  }
+  scan(){}
+  isEof(){}
+  scanUntil(){}
+}
 
 export { 
   parse, 

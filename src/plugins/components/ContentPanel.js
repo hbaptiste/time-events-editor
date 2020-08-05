@@ -1,28 +1,30 @@
 import CustomElement from '../../CustomElement'
+import { set } from 'lodash'
 
 CustomElement.register({
     is: "content-panel",
-    properties: ["title", "messages"],
+    properties: [ "title", "messages" ],
+
     data: {
         title: "Haïti!",
-        messagesList: []
+        messagesList: [],
+        init: false
     },
+
     events: {
-        
-        onAdd: (ctx) => {
-            console.log("-- radical --")
+
+        onAdd: function(ctx) {
             const msg = ctx._createMessage()
-            ctx.data.title = " Title radical! "
-            ctx.data.messagesList = [...ctx.data.messagesList,msg]
-           
+            ctx.data.title = "Title radical! "
+            ctx.data.messagesList = [...ctx.data.messagesList, msg]
         },
-        
+
         onRemove: function() {
             console.log("== radical ==")
             console.log(this)
         },
 
-        sayHello: () => {
+        sayHello: function() {
             alert("you better know!")
         }
     },
@@ -33,21 +35,33 @@ CustomElement.register({
             data: {type: "text", content: "You better know!"}
         }
     },
+
     handleDuration: function(duration) {
         const [start, end] = duration
-        return `Start at ${start} end at ${end}!`
+        return `Start at <strong>${start}</strong>end at <strong>${end}</strong>!`
     },
 
     onInit: function() {
         this.data.messagesList = this.messages
-        
     },
-    test: () => {
-        console.log("inside test!")
+
+    declareSideEffects: function() {
+        this.registerSideEffects(this.loadData, [ "messages", "init" ])
+    },
+
+    loadData: function(messages, init) {
+        console.log(messages)
+        console.log(`init ${init}!`)
+        console.log(this)
+        if (init) { return false }
+        console.log(this)
+        setTimeout(() => {
+            this.data.init = true
+        }, 2000)
     },
 
     getTemplate: function() {
-       return html`<template>
+       return `<template>
                     <style>
                         :host {
                             .radical-test { border: "1px solid red" }

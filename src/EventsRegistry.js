@@ -72,11 +72,10 @@ export default class EventsRegistry {
     event.width = Math.floor(duration * RATE);
 
     /* new row */
-    console.log("---- ----")
-    console.log(event)
     this.uiManager.send({ type: "NEW_EVENT", event });
     this.eventsList.push(event);
   }
+  
   _onStart(event) {
     /* notify ui manager -> highlight */
     this.uiManager.send({ type: "START_EVENT", event });
