@@ -17,6 +17,49 @@ const setNodeTemplate = function(node) {
   return { key }
 }
 
+const _parseAttrDirective = function(attr) {
+  let directive;
+  const attrString = `${attr.name}=${attr.value}`;
+  const directivePatterns = {
+    longPattern: /(\w+):(\w+)=([\"\w\s\"]+)/gi,
+    shortPattern: /@(\w+)(:\w+)?=(!?\w+)/gi //add .. more boolean,functionpatterns
+  };
+  const infos = Object.keys(directivePatterns).map(key => {
+    const pattern = directivePatterns[key];
+    const result = pattern.exec(attrString);
+    let _, ns, name, modifier, value = null;
+
+    if (!result) {
+      return;
+    }
+    if (key === "longPattern") {
+      [_, ns, name, value] = result;
+    }
+    if (key === "shortPattern") {
+      [_, name, modifier, value] = result;
+    }
+    directive = {
+      name: name,
+      value: value,
+      modifier: modifier,
+      node: attr.ownerElement
+    };
+  });
+  return directive;
+}
+
+const parseDirectives = function(node) {
+  console.log("-- node --")
+  console.log(node)
+  let directives = []
+  const isUndefined = (dir) => dir !== undefined
+  directives = Array.from(node.attributes)
+    .map(att => _parseAttrDirective(att))
+    .filter(isUndefined)
+    .filter(dir => keys.indexOf(dir.name) !== -1)
+  return directives
+}
+
 const setRenderedItems = function(key, items) {
   if (Array.isArray(items)) {
     renderedItemsRecords.set(key, items)  
@@ -32,7 +75,7 @@ const getNodeTemplate = function(node) {
   return templateRecords.get(key)
 }
 
-
+/* parse  Template */
 const parseExpressions = function(node) {
     const { walker } = createWalker({ root: node, filter: NodeFilter.SHOW_TEXT })
     const textNodes = [], tokens = []
@@ -101,12 +144,95 @@ const parseExpressions = function(node) {
     return result
   }
   
+
+  /* visitor */
+  /* isText */
+  /* isNode */
+  /* isDirective */
+  const visit = function(root, callback) {
+      callback(root)
+      const children = root.children
+      children.map(child => visit(child, callback))
+      return root
+  }
+  // Option 1 -> renvoie une fonction qui lorsqu'elle est executée remplace les variables
+  // 2 liste de directives
+  const parseSection = function(node) {
+
+    /** build tokens here */
+    const { walker, skip } = createWalker({ root: node})
+
+    const createNode = function(node) {
+      const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName 
+      return { type: nodeType, children: [], directives: [], attributes:[] }
+    }
+    /* -- find -- */
+    let previousNode = null
+    let previousParent = null
+    let root = null
+    const previousParents = []
+
+    const getParent = function(node) {
+      return previousParents.find(parent => node == parent.node)
+    }
+
+    const saveParent = function(node) {
+      const parent = getParent(node)
+      if (!parent) { previousParents.push(node) }
+    }
+
+    walker((element) => {
+      //prevent empty text node
+      let currentNode = createNode(element)
+      currentNode.attributes = element.attributes
+      currentNode.directives = parseDirectives(element)
+      if (!previousParent) {
+        root = createNode(element.parentNode)
+        root.isRoot = true
+        root.attributes = element.attributes
+        root.children.push(currentNode)
+        previousParent = root
+        saveParent(root)
+      } else if (element.parentNode == previousParent.node) {
+        previousParent.children.push(currentNode)
+      } else if (element.parentNode == previousNode.node) {
+        previousNode.children.push(currentNode)
+        previousParent = previousNode
+        saveParent(previousNode)
+      } else {
+        const parentNode = getParent(element.parentNode)
+        if (parentNode) {
+          parentNode.children.push(currentNode)
+          previousParent = parentNode
+        }
+      }
+      /* -- check that -- */
+      previousNode = currentNode
+
+    })
+    
+    const renderSection = function(data) { 
+      
+      /* build and construct */
+      const newRoot = null
+      const doTransform = function(node) {
+        console.log("-- inside transform node --")
+        console.log(node)
+      }
+      
+      return visit(root, doTransform)
+    }
+    
+    return { renderSection }
+  }
+
+
   const parse = function(node) {
     const data = parseExpressions(node)
-    return { 
+    return {
               render : (context) => {
                 return renderTemplate(data, context) 
-      }
+              }
     }
   }
   const cleanKey = function(key) {
@@ -118,7 +244,6 @@ const _parseAndToken = function(node) {
     const { walker } = createWalker({root:node, filter: NodeFilter.SHOW_TEXT})
     const textsNode = []
     walker((node) => {
-        console.log("radicak blaze")
         textsNode.push(node)
     })
 }
@@ -178,7 +303,7 @@ const createWalker = function(params) {
     const walker = (cb) => {
         while(treeWalker.nextNode()) {
             const currentNode = treeWalker.currentNode
-            cb(currentNode)
+            cb(currentNode,root)
         }
     }
 
@@ -225,8 +350,17 @@ class Scanner {
     this.pos = 0
   }
   scan(){}
-  isEof(){}
+  isEos() {
+    return this.pos === this.string.length - 1
+  }
   scanUntil(){}
+}
+
+// useful lookup nested value
+const createDataContext = function(data, parent) {
+
+  const lookup = { }
+  return { lookup }
 }
 
 export { 
@@ -236,5 +370,6 @@ export {
   getNodeTemplate, 
   setNodeTemplate,
   setRenderedItems,
-  getRenderedItems
+  getRenderedItems,
+  parseSection
 }

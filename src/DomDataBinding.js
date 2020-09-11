@@ -77,15 +77,27 @@ export default class DomDataBinding {
     return this;//expose proper api
   }
 
-  addParts(root) {
-    const rootFragment = document.createElement("div")
-    rootFragment.appendChild(root)
-    console.log(rootFragment)
-    this._parseAll(rootFragment)
+  addParts(parts, dataContext) {
+    if(!parts) { return }
+    const rootWrapper = document.createElement("div")
+    parts.map( item => rootWrapper.appendChild(item))
+    //this._parseAll(rootWrapper)
+  }
+
+  /* must return -> html */
+  renderBlock(node, dataContext) {
+    const t  = { lookup : (name) => {} }
+    const content = node.innerHTML
+    console.log(content)
+    const li = document.createElement("li")
+    li.textContent = "Radical blaze"
+    console.log("--- render block ---")
+    console.log(node)
+    return li
   }
 
   _parseAll(root = null) {
-    console.log(root)
+
     const { walker, skip } = createWalker({
       root: root || this.target.root, 
       filter: NodeFilter.SHOW_ELEMENT 
@@ -255,7 +267,7 @@ export default class DomDataBinding {
       .filter(dir => keys.indexOf(dir.name) !== -1)
     return directives
   }
-
+  
   updateModel(node) {
    
     const [ directive ] = this.getDirectives(node, ["model"])
@@ -292,7 +304,7 @@ export default class DomDataBinding {
       parentDirectives = Array.from(parentAttr)
         .map(attr => dparser(attr))
         .filter(isUndefined)
-      }
+    }
     
     let templateDirectives = this._handleTemplateExpressions(node)
     /* skip foreach directive */
@@ -312,6 +324,7 @@ export default class DomDataBinding {
       }
     })
   }
+
   
   _parseAttrProps(attr) {
     const { name, nodeValue } = attr

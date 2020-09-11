@@ -25,6 +25,7 @@ CustomElement.register({
                     <div>
                         <span km:foreach="ev in event.samples">
                             this is my event -> {ev}!
+                            <em>test</em>
                         </span>
                     </div>
                 </div>

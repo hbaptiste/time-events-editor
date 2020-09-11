@@ -1,6 +1,6 @@
 import DomDataBinding from "./DomDataBinding";
 import CustomElement from "./CustomElement"
-import { parse as templateParser, setRenderedItems, getRenderedItems } from "./TemplateHelpers"
+import { parse as templateParser, setRenderedItems, getRenderedItems, parseSection } from "./TemplateHelpers"
 
 /* counter */
 const getCounter = (function() {
@@ -103,6 +103,11 @@ DomDataBinding.registerDirective("foreach", {
                 item.parentNode.removeChild(item)
               })
             }
+              /* new section block */
+            const {renderSection } = parseSection(node)
+            console.log("--- not been seen ---")
+            console.log(renderSection({itemKey, [itemKey]: dataList, ctx}))
+            console.log("---------------------")
 
             const fragment = document.createDocumentFragment()
             const clonedNode = document.createElement(node.tagName)
@@ -120,8 +125,8 @@ DomDataBinding.registerDirective("foreach", {
     
             let placeholder = target || node
             const emptyPlaceHolder = document.createElement("template")
-            // --> si vide
-            if (!renderedList.length) { 
+            
+            if (!renderedList.length) {
               if (parentNode.contains(node)) {
                 parentNode.insertBefore(emptyPlaceHolder, node) // li -> template
                 parentNode.removeChild(node)
@@ -133,7 +138,8 @@ DomDataBinding.registerDirective("foreach", {
             } else {
               parentNode.insertBefore(fragment, placeholder)
               parentNode.removeChild(placeholder)
-              ctx.addParts(renderedList,params)
+              //ctx.addParts(renderedList,params)
+              ctx.renderBlock(node)
             }
             
             setRenderedItems(templateKey, renderedList)
