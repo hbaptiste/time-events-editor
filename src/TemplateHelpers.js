@@ -48,9 +48,8 @@ const _parseAttrDirective = function(attr) {
   return directive;
 }
 
-const parseDirectives = function(node) {
-  console.log("-- node --")
-  console.log(node)
+const parseDirectives = function(node,keys=[]) {
+  if (!node.attributes) { return [] }
   let directives = []
   const isUndefined = (dir) => dir !== undefined
   directives = Array.from(node.attributes)
@@ -149,14 +148,19 @@ const parseExpressions = function(node) {
   /* isText */
   /* isNode */
   /* isDirective */
-  const visit = function(root, callback) {
-      callback(root)
-      const children = root.children
-      children.map(child => visit(child, callback))
-      return root
+  const visit = function(node, callback) {
+    
+    const _visit = function(node, parent, index) {
+      callback(node, parent, index)
+      node.children.map((child, index) => _visit(child, node, index))
+    
+    }
+    //params node, parent, index
+    callback(node)
+    node.children.map((child, index) => _visit(child, node, index))
+    return node
   }
-  // Option 1 -> renvoie une fonction qui lorsqu'elle est executée remplace les variables
-  // 2 liste de directives
+  
   const parseSection = function(node) {
 
     /** build tokens here */
@@ -164,7 +168,12 @@ const parseExpressions = function(node) {
 
     const createNode = function(node) {
       const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName 
-      return { type: nodeType, children: [], directives: [], attributes:[] }
+      return { 
+        type: nodeType, 
+        children: [], 
+        directives: [], 
+        attributes:[] 
+      }
     }
     /* -- find -- */
     let previousNode = null
@@ -199,7 +208,7 @@ const parseExpressions = function(node) {
         previousNode.children.push(currentNode)
         previousParent = previousNode
         saveParent(previousNode)
-      } else {
+      } else {// siblings
         const parentNode = getParent(element.parentNode)
         if (parentNode) {
           parentNode.children.push(currentNode)
@@ -215,7 +224,7 @@ const parseExpressions = function(node) {
       
       /* build and construct */
       const newRoot = null
-      const doTransform = function(node) {
+      const doTransform = function(node, parent, index) {
         console.log("-- inside transform node --")
         console.log(node)
       }
