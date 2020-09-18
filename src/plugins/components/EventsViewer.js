@@ -11,9 +11,6 @@ CustomElement.register({
 
     onInit: function() {
         this.data.events = this.events
-        console.log('-- radical ---')
-        console.log(this.data.events)
-        console.log("------")
     },
 
     getTemplate : function() {

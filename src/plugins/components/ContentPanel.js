@@ -50,11 +50,9 @@ CustomElement.register({
     },
 
     loadData: function(messages, init) {
-        console.log(messages)
-        console.log(`init ${init}!`)
-        console.log(this)
+        
         if (init) { return false }
-        console.log(this)
+       
         setTimeout(() => {
             this.data.init = true
         }, 2000)

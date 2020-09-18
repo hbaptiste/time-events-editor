@@ -1,6 +1,6 @@
 import Signal from "./Signal";
 import CustomElement from "./CustomElement"
-import {createWalker, setNodeTemplate} from "./TemplateHelpers"
+import {createWalker, parseDirectives as getDirectives, setNodeTemplate} from "./TemplateHelpers"
 
 // https://github.com/patrick-steele-idem/morphdom/tree/fe35db9adda1f22fe5856e8e0f78048f8f4b0f18/examples/lifecycle-events
 const FOREACH_DIRECTIVE = "foreach"
@@ -86,14 +86,8 @@ export default class DomDataBinding {
 
   /* must return -> html */
   renderBlock(node, dataContext) {
-    const t  = { lookup : (name) => {} }
-    const content = node.innerHTML
-    console.log(content)
-    const li = document.createElement("li")
-    li.textContent = "Radical blaze"
-    console.log("--- render block ---")
-    console.log(node)
-    return li
+   
+   
   }
 
   _parseAll(root = null) {
@@ -107,8 +101,6 @@ export default class DomDataBinding {
         const { type } = this._handleParts(node)
         if (type === 1 ) { skip() }
         if (this._hasForeach(node)) {
-          console.log("=====/radi/cal/ =====")
-          console.log(node)
           skip()
         }
     })
@@ -253,19 +245,13 @@ export default class DomDataBinding {
     if (!directive || typeof directive.init != "function") {
       throw "Directive not Found!";
     }
-    
-    directive.init(ctx, directiveConfig);
+    console.log("--- pensée ---")
+    console.log(directiveConfig)
+    //directive.init(ctx, directiveConfig);
   }
 
   getDirectives(node, keys = []) {
-    let directives = []
-    const isUndefined = (dir) => dir !== undefined
-    const dparser = this._parseAttrDirective.bind(this)
-    directives = Array.from(node.attributes)
-      .map(att => dparser(att))
-      .filter(isUndefined)
-      .filter(dir => keys.indexOf(dir.name) !== -1)
-    return directives
+    return getDirectives(node, keys)
   }
   
   updateModel(node) {

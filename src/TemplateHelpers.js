@@ -17,13 +17,20 @@ const setNodeTemplate = function(node) {
   return { key }
 }
 
+const _parseDirectiveValue = function(value) {
+  const itemReg = /(\w+)\sin\s(\w+)/gi
+  const [_, localName, parentName] = itemReg.exec(value);
+  return {localName, parentName}
+}
+
 const _parseAttrDirective = function(attr) {
   let directive;
   const attrString = `${attr.name}=${attr.value}`;
   const directivePatterns = {
     longPattern: /(\w+):(\w+)=([\"\w\s\"]+)/gi,
-    shortPattern: /@(\w+)(:\w+)?=(!?\w+)/gi //add .. more boolean,functionpatterns
+    shortPattern: /@(\w+)(:\w+)?=(!?\w+)/gi
   };
+
   const infos = Object.keys(directivePatterns).map(key => {
     const pattern = directivePatterns[key];
     const result = pattern.exec(attrString);
@@ -38,17 +45,22 @@ const _parseAttrDirective = function(attr) {
     if (key === "shortPattern") {
       [_, name, modifier, value] = result;
     }
+    value = (name === "foreach") ? _parseDirectiveValue(value) : value
+    /* directive */
     directive = {
       name: name,
-      value: value,
-      modifier: modifier,
+      value,
+      modifier,
       node: attr.ownerElement
     };
+
+    
   });
+
   return directive;
 }
 
-const parseDirectives = function(node,keys=[]) {
+const parseDirectives = function(node, keys = []) {
   if (!node.attributes) { return [] }
   let directives = []
   const isUndefined = (dir) => dir !== undefined
@@ -149,30 +161,46 @@ const parseExpressions = function(node) {
   /* isNode */
   /* isDirective */
   const visit = function(node, callback) {
-    
+    // Deal with skip ///
     const _visit = function(node, parent, index) {
       callback(node, parent, index)
-      node.children.map((child, index) => _visit(child, node, index))
-    
+      if (node.children) {
+        node.children = node.children.map((child, index) => { return _visit(child, node, index) })
+      }
+      return node
     }
-    //params node, parent, index
     callback(node)
-    node.children.map((child, index) => _visit(child, node, index))
+    node.children = node.children.map((child, index) => {
+      return _visit(child, node, index)
+    })
     return node
   }
   
   const parseSection = function(node) {
 
     /** build tokens here */
-    const { walker, skip } = createWalker({ root: node})
+    const { walker, skip } = createWalker({root: node})
 
+    /* create Node */
+    //dom toast
     const createNode = function(node) {
-      const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName 
-      return { 
-        type: nodeType, 
-        children: [], 
-        directives: [], 
-        attributes:[] 
+      const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName
+      
+      if (nodeType === "TEXT") {
+        return {
+          type: "element",
+          name: nodeType,
+          value: node.textContent
+        }
+      } else {
+          return {
+            type: "element",
+            name: nodeType,
+            children: [],
+            directives: parseDirectives(node),
+            attributes:[],
+            node
+          }
       }
     }
     /* -- find -- */
@@ -189,26 +217,29 @@ const parseExpressions = function(node) {
       const parent = getParent(node)
       if (!parent) { previousParents.push(node) }
     }
-
     walker((element) => {
-      //prevent empty text node
       let currentNode = createNode(element)
-      currentNode.attributes = element.attributes
-      currentNode.directives = parseDirectives(element)
+      /* deal with section / directive */
+      if (isASection(currentNode)) {
+        currentNode.type = "section"   
+      }
       if (!previousParent) {
         root = createNode(element.parentNode)
         root.isRoot = true
-        root.attributes = element.attributes
+        root.directives = parseDirectives(element.parentNode)
         root.children.push(currentNode)
         previousParent = root
-        saveParent(root)
+        if (isASection(currentNode)) {
+          root.type = "section"
+        }
+        saveParent(previousParent)
       } else if (element.parentNode == previousParent.node) {
         previousParent.children.push(currentNode)
       } else if (element.parentNode == previousNode.node) {
         previousNode.children.push(currentNode)
         previousParent = previousNode
         saveParent(previousNode)
-      } else {// siblings
+      } else { // siblings
         const parentNode = getParent(element.parentNode)
         if (parentNode) {
           parentNode.children.push(currentNode)
@@ -217,24 +248,26 @@ const parseExpressions = function(node) {
       }
       /* -- check that -- */
       previousNode = currentNode
-
     })
-    
-    const renderSection = function(data) { 
-      
-      /* build and construct */
-      const newRoot = null
+   
+    const renderSection = function(data) {
+
+      /* build and construct dom */
       const doTransform = function(node, parent, index) {
-        console.log("-- inside transform node --")
-        console.log(node)
+        switch (node.type) {
+          case "section": visitSection(node, parent, index)
+        }
       }
-      
       return visit(root, doTransform)
     }
-    
+
     return { renderSection }
   }
-
+  
+  const visitSection = function(node, parent, index) {
+    console.log("...visiting section ...")
+    console.log(node, parent, index)
+  }
 
   const parse = function(node) {
     const data = parseExpressions(node)
@@ -247,7 +280,13 @@ const parseExpressions = function(node) {
   const cleanKey = function(key) {
     return key.replace("{","").replace("}","")
   }
-  
+
+/* is a section */
+const isASection = function(node) {
+  const directives = node.directives || []
+  if (!Array.isArray(directives)) { return false }
+  return directives.filter( dir => dir.name === "foreach").length
+}
 
 const _parseAndToken = function(node) {
     const { walker } = createWalker({root:node, filter: NodeFilter.SHOW_TEXT})
@@ -372,7 +411,7 @@ const createDataContext = function(data, parent) {
   return { lookup }
 }
 
-export { 
+export {
   parse, 
   renderTemplate, 
   createWalker, 
@@ -380,5 +419,6 @@ export {
   setNodeTemplate,
   setRenderedItems,
   getRenderedItems,
-  parseSection
+  parseSection,
+  parseDirectives
 }

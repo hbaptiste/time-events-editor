@@ -68,12 +68,13 @@ DomDataBinding.registerDirective("showif", {
 /* foreach */
 DomDataBinding.registerDirective("foreach", {
   
-  init: function(ctx, { node, value  }) {
-    const itemReg = /(\w+)\sin\s(\w+)/gi;
-    const rst = itemReg.exec(value);
-    const nodeType = node.tagName; 
-    const [_, itemKey, sourceVariable] = rst;
-   
+  init: function(ctx, t, { node, value, variableInfos}) {
+    console.log("--- radical ---")
+    console.log("--- value ---")
+    console.log(value)
+    const nodeType = node.tagName;
+    const {itemKey:localName, sourceVariable:parentName} = variableInfos;
+    
     let parentNode = node.parentNode;
     const templateKey = node.dataset.templateKey
     
@@ -106,6 +107,7 @@ DomDataBinding.registerDirective("foreach", {
               /* new section block */
             const {renderSection } = parseSection(node)
             console.log("--- not been seen ---")
+            console.log(node)
             console.log(renderSection({itemKey, [itemKey]: dataList, ctx}))
             console.log("---------------------")
 
@@ -156,11 +158,11 @@ DomDataBinding.registerDirective("foreach", {
       if (key !== sourceVariable) {
         return false;
       }
-      createListHandler({context: ctx, sourceKey: key, itemKey, values: value})()
+      //createListHandler({context: ctx, sourceKey: key, itemKey, values: value})()
     });
   try { 
       const func = () => {}
-    ctx.queued(func/*createListHandler({context:ctx, sourceVariable, itemKey})*/)
+      ctx.queued(func/*createListHandler({context:ctx, sourceVariable, itemKey})*/)
   } catch (reason) {
     console.log("-- reason --")
     console.log(reason)
