@@ -1,3 +1,5 @@
+import { assign, forEach } from 'lodash'
+import Context from './Context' 
 const templateRecords = new Map()
 const renderedItemsRecords = new Map()
 
@@ -18,16 +20,16 @@ const setNodeTemplate = function(node) {
 }
 
 const _parseDirectiveValue = function(value) {
-  const itemReg = /(\w+)\sin\s(\w+)/gi
-  const [_, localName, parentName] = itemReg.exec(value);
-  return {localName, parentName}
+  const itemReg = new RegExp(/(\w+)\sin\s([a-zA-Z0-9_]+(\.[a-zA-Z0-9_]*)*)/,'gm')
+  const [_,localName, parentName] = itemReg.exec(value);
+  return { localName, parentName }
 }
 
 const _parseAttrDirective = function(attr) {
   let directive;
   const attrString = `${attr.name}=${attr.value}`;
   const directivePatterns = {
-    longPattern: /(\w+):(\w+)=([\"\w\s\"]+)/gi,
+    longPattern: /(\w+):(\w+)=([\"\w\s\.\"]+)/gi,
     shortPattern: /@(\w+)(:\w+)?=(!?\w+)/gi
   };
 
@@ -53,8 +55,6 @@ const _parseAttrDirective = function(attr) {
       modifier,
       node: attr.ownerElement
     };
-
-    
   });
 
   return directive;
@@ -67,7 +67,7 @@ const parseDirectives = function(node, keys = []) {
   directives = Array.from(node.attributes)
     .map(att => _parseAttrDirective(att))
     .filter(isUndefined)
-    .filter(dir => keys.indexOf(dir.name) !== -1)
+    //.filter(dir => keys.indexOf(dir.name) !== -1)
   return directives
 }
 
@@ -86,6 +86,33 @@ const getNodeTemplate = function(node) {
   return templateRecords.get(key)
 }
 
+const parseTextNodeExpressions = function(textContent) {
+
+    const execPattern = new RegExp('{.*?}','g')
+    const strings = []
+    let nextStart = 0
+    let tokens = []
+    let token
+    while ((token = execPattern.exec(textContent)) !== null) {
+      const exp = parseTemplateExpr(token) || {}
+      const [match] = token
+      const prevString = textContent.substring(nextStart, token.index)
+      nextStart = token.index + match.length
+      strings.push([prevString, exp])
+      strings.push([match, exp])
+      if (nextStart < textContent.length) {
+        strings.push([textContent.substring(nextStart), exp])
+      }
+    }
+    if (strings.length !== 0) {
+      strings.map(([item, exp]) => {
+          const itemExp = item.startsWith("{") ? exp: {}
+          tokens.push({type: 'element', name: 'TEXT', value: item, ...itemExp})            
+      })
+    }
+
+  return { tokens }
+}
 /* parse  Template */
 const parseExpressions = function(node) {
     const { walker } = createWalker({ root: node, filter: NodeFilter.SHOW_TEXT })
@@ -155,24 +182,20 @@ const parseExpressions = function(node) {
     return result
   }
   
-
-  /* visitor */
-  /* isText */
-  /* isNode */
-  /* isDirective */
-  const visit = function(node, callback) {
+  const visit = function(node, {enterVisitor, exitVisitor}) {
     // Deal with skip ///
     const _visit = function(node, parent, index) {
-      callback(node, parent, index)
-      if (node.children) {
-        node.children = node.children.map((child, index) => { return _visit(child, node, index) })
+      enterVisitor(node, parent, index)
+      if (Array.isArray(node.children) && node.children.length) {
+        node.children.forEach((child, index) => {
+          _visit(child, node, index) 
+        })
       }
-      return node
+      exitVisitor(node, parent, index)
     }
-    callback(node)
-    node.children = node.children.map((child, index) => {
-      return _visit(child, node, index)
-    })
+
+    _visit(node, null, null)
+
     return node
   }
   
@@ -182,7 +205,6 @@ const parseExpressions = function(node) {
     const { walker, skip } = createWalker({root: node})
 
     /* create Node */
-    //dom toast
     const createNode = function(node) {
       const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName
       
@@ -221,7 +243,8 @@ const parseExpressions = function(node) {
       let currentNode = createNode(element)
       /* deal with section / directive */
       if (isASection(currentNode)) {
-        currentNode.type = "section"   
+        currentNode.type = "section"
+        updateSectionInfos(currentNode)
       }
       if (!previousParent) {
         root = createNode(element.parentNode)
@@ -229,8 +252,9 @@ const parseExpressions = function(node) {
         root.directives = parseDirectives(element.parentNode)
         root.children.push(currentNode)
         previousParent = root
-        if (isASection(currentNode)) {
+        if (isASection(root)) {
           root.type = "section"
+          updateSectionInfos(root)
         }
         saveParent(previousParent)
       } else if (element.parentNode == previousParent.node) {
@@ -249,24 +273,89 @@ const parseExpressions = function(node) {
       /* -- check that -- */
       previousNode = currentNode
     })
-   
-    const renderSection = function(data) {
-
-      /* build and construct dom */
-      const doTransform = function(node, parent, index) {
-        switch (node.type) {
-          case "section": visitSection(node, parent, index)
-        }
-      }
-      return visit(root, doTransform)
-    }
-
-    return { renderSection }
+   return root
   }
   
-  const visitSection = function(node, parent, index) {
-    console.log("...visiting section ...")
-    console.log(node, parent, index)
+  /* is a section */
+  const isASection = function(node) {
+    const directives = node.directives || []
+    if (!Array.isArray(directives)) { return false }
+    return directives.filter( dir => dir.name === "foreach").length
+  }
+
+  const updateSectionInfos = function(node) {
+    const directive = node.directives.find(dir => dir.name === "foreach")
+    const { localName, parentName } = directive.value
+    node.sectionInfos = {localName, parentName}
+    return node
+  }
+
+  /* made recursive */
+  const renderSection = function({ctx, node, data}) {
+
+    const rootCtx = new Context(ctx.target.data)
+    if (Array.isArray(data) && data.length === 0) { return }
+    const ast = parseSection(node)
+    
+    /* setting contexts */
+    const enterVisitor = (node, parent) => {
+      switch(node.type) {
+        case "element":
+            node.ctx = node.ctx || parent.ctx
+            break;
+        case "section":
+          let { localName, parentName } = node.sectionInfos
+          const [ pName ] = parentName.split(".")
+          const { name } = node
+          let data = []
+          const newChildren = []
+
+          const cleanChildren = function(parentCtx, children) {
+            return children.map(function(child) {
+              console.log("-- param --")
+              console.log(parentCtx.data)
+              return child
+            })
+          }
+          if (!parent) {
+            data = rootCtx.lookup(parentName)
+            node.ctx = rootCtx.createFrom({ [localName] : data })
+          } else if (node.ctx !== null || parent.ctx) {
+            const itemCtx = node.ctx || parent.ctx
+            data = itemCtx.lookup(parentName) || []
+            node.ctx = itemCtx.createFrom({ [localName]: data })
+          }
+          /* populate */
+          data.forEach((item) => {
+            let itemCtx = node.ctx.createFrom({ [localName]: item })
+            const newNode = {
+              name,
+              ctx: itemCtx,
+              type: "element",
+              children: cleanChildren(itemCtx, node.children)
+            }
+            newChildren.push(newNode)
+          })
+          node.type = "fragment"
+          node.children = newChildren
+          break;
+      }
+    }
+    
+    /* perform modification */
+    const exitVisitor = (node, parent, position) => {
+      switch(node.name) {
+        case 'TEXT':
+         const {tokens} = parseTextNodeExpressions(node.value)
+          tokens.forEach((tNode) => tNode.ctx = node.ctx)
+          if (Array.isArray(tokens)) {
+            parent.children.splice(...[position,1].concat(tokens))
+          }
+      }
+    }
+    const domData = visit(ast, { enterVisitor, exitVisitor })
+    console.log(ast)
+    return compile(domData)
   }
 
   const parse = function(node) {
@@ -274,19 +363,12 @@ const parseExpressions = function(node) {
     return {
               render : (context) => {
                 return renderTemplate(data, context) 
-              }
+          }
     }
   }
   const cleanKey = function(key) {
     return key.replace("{","").replace("}","")
   }
-
-/* is a section */
-const isASection = function(node) {
-  const directives = node.directives || []
-  if (!Array.isArray(directives)) { return false }
-  return directives.filter( dir => dir.name === "foreach").length
-}
 
 const _parseAndToken = function(node) {
     const { walker } = createWalker({root:node, filter: NodeFilter.SHOW_TEXT})
@@ -367,23 +449,91 @@ const createWalker = function(params) {
     return { walker, skip }
 }
 
-/***
- * - template
- * <li km:foreach="ev in event.items">
- *      event {ev.name}!
- *      tags: <a km=foreach="name is ev.samples">
- *        {name}
- *      </a>
- * </li>
- * 
- * - render
- * <li>
- *  Livre! tags : <a>Comment</a>,<a>Happy</a>, <a>Matter</a>
- * </li>
- * - code
- *  document.createElement()
- * 
- */
+/* */
+const compile = function(ast) {
+  
+  const applyFilter = function(ctx) {
+    console.log(ctx)
+  }
+
+  const genCode = function(node) {
+    const stm = []
+    switch(node.type) {
+      case "element":
+        switch(node.name) {
+          case "TEXT":
+            const textStm = `(function() {
+              return function() {
+                const element = document.createTextNode("${node.name}");
+                const {exp = null, ctx } = node
+                const value = exp ? ctx.lookup(exp) : node.value
+                element.textContent = value
+                return element;
+              }
+            }(node))
+            `
+            return eval(textStm)
+          default:
+            const defaultStm = `(function() {
+              return function() {
+                const element = document.createElement("${node.name}");
+                const children = node.children.map(genCode) || [];
+                children.map((childFnc) => {
+                  element.appendChild(childFnc())
+                })
+                return element;
+              }
+            }(node))
+           `
+           return eval(defaultStm)
+          }
+        break;
+      case "fragment":
+          let stmFrag = ''
+          if (node.isRoot) {
+            stmFrag = `(function() {
+              return function(root) {
+                const rootFrag = document.createDocumentFragment()
+                const transformed = root.children.map(genCode) || []
+                transformed.map(childFnc => {
+                  rootFrag.appendChild(childFnc())
+                })
+                return rootFrag;
+              }
+            }())`
+          } else {
+            stmFrag = `(function() {
+              return function(root) {
+                const children = node.children
+                const frag = document.createDocumentFragment()
+                const transformed = children.map(genCode) || []
+                transformed.map((childFnc) => {
+                  frag.appendChild(childFnc())
+                })
+                return frag;
+              }
+            }(node))
+            `
+            return eval(stmFrag)  
+          }
+          stm.push(stmFrag)
+          break;
+      default:
+        throw `const stm = new Error()`
+    }
+    return stm.join("\n")
+  }
+  const str = genCode(ast)
+  try {
+    return eval(str)(ast)
+  } catch(e) {
+    console.log("--- error ---")
+    console.log(e)
+  }
+  
+}
+
+
 /* template and code builder */
 const tokenize = function(template) {
   if (!template || template.length) { return [] }
@@ -404,13 +554,6 @@ class Scanner {
   scanUntil(){}
 }
 
-// useful lookup nested value
-const createDataContext = function(data, parent) {
-
-  const lookup = { }
-  return { lookup }
-}
-
 export {
   parse, 
   renderTemplate, 
@@ -420,5 +563,6 @@ export {
   setRenderedItems,
   getRenderedItems,
   parseSection,
-  parseDirectives
+  parseDirectives,
+  renderSection
 }

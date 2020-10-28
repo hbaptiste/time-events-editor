@@ -1,5 +1,5 @@
 
-class Context {
+export default class Context {
 
     /* */
     constructor(data, parent = null) {
@@ -18,8 +18,6 @@ class Context {
      * Key exemple:  node, neke.kes.yes
      */
     lookup(key) {
-        console.log(`Key ${key}!`)
-        /** data->parent->parent... */
         const keyName = key.split(".")
         let localData = null
         while (keyName.length > 0) {
@@ -39,28 +37,7 @@ class Context {
         this.ctxParent = null
     }
 
-}
-const parentData = {
-    name: "harris", 
-    address: "Parent address !",
-    main: {
-        user: {
-            name: "Parent Chain!"
-        }
+    createFrom(data) {
+        return new Context(data, this)
     }
 }
-const childData = {
-    realname: "Patrov", 
-    adsdress: "Child address!",
-    main: {
-        user: { name: "Child Nested name!" }
-    }
-}
-/* -- srange -- */
-const parentCtx = new Context(parentData)
-const childContext = new Context(childData, parentCtx)
-
-//console.log(childContext.lookup("name"))
-//console.log(childContext.lookup("realname"))
-console.log(childContext.lookup("main.user.name"))
-module.exports = Context;

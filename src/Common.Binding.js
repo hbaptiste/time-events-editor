@@ -1,6 +1,7 @@
 import DomDataBinding from "./DomDataBinding";
 import CustomElement from "./CustomElement"
-import { parse as templateParser, setRenderedItems, getRenderedItems, parseSection } from "./TemplateHelpers"
+import { parse as templateParser, setRenderedItems, getRenderedItems, renderSection } from "./TemplateHelpers"
+import { lowerFirst } from "lodash";
 
 /* counter */
 const getCounter = (function() {
@@ -68,22 +69,18 @@ DomDataBinding.registerDirective("showif", {
 /* foreach */
 DomDataBinding.registerDirective("foreach", {
   
-  init: function(ctx, t, { node, value, variableInfos}) {
-    console.log("--- radical ---")
-    console.log("--- value ---")
-    console.log(value)
+  init: function(ctx, { node, value }) {
+    const { localName, parentName } = value
     const nodeType = node.tagName;
-    const {itemKey:localName, sourceVariable:parentName} = variableInfos;
-    
+
     let parentNode = node.parentNode;
     const templateKey = node.dataset.templateKey
     
-
     const createListHandler = function(params) {
         return function() {
-          const {context, values, sourceVariable, itemKey} = params
+          const {ctx, values, sourceVariable, itemKey} = params
           let dataList = []
-          dataList = context.target.data[sourceVariable] || values;
+          dataList = ctx.target.data[parentName] || values;
 
           if (!dataList) { return }
           if (nodeType === "OPTION") {
@@ -105,12 +102,11 @@ DomDataBinding.registerDirective("foreach", {
               })
             }
               /* new section block */
-            const {renderSection } = parseSection(node)
-            console.log("--- not been seen ---")
-            console.log(node)
-            console.log(renderSection({itemKey, [itemKey]: dataList, ctx}))
-            console.log("---------------------")
-
+              const domSection = renderSection({ctx, data: values, node, localName, parentName})
+              console.log("----- domSection ----")
+              console.log(domSection)
+              console.log("---------------------")
+              /* new section block */
             const fragment = document.createDocumentFragment()
             const clonedNode = document.createElement(node.tagName)
             clonedNode.innerHTML = node.innerHTML
@@ -145,20 +141,16 @@ DomDataBinding.registerDirective("foreach", {
             }
             
             setRenderedItems(templateKey, renderedList)
-            //ctx.addParts(fragment)
-            // force parsing handle subcomponents
-            // parse directive apply event delegation
           }
         }
      }
 
     /* handle list changes */ 
     ctx.signals.dataChanged.connect((key, value) => {
-
-      if (key !== sourceVariable) {
+      if (key !== parentName) {
         return false;
       }
-      //createListHandler({context: ctx, sourceKey: key, itemKey, values: value})()
+      createListHandler({ctx, sourceKey: key, itemKey: localName, values: value})()
     });
   try { 
       const func = () => {}

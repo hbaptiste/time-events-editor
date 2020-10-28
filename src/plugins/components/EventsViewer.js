@@ -11,6 +11,8 @@ CustomElement.register({
 
     onInit: function() {
         this.data.events = this.events
+        console.log("-- event viewer --")
+        console.log(this.data)
     },
 
     getTemplate : function() {
@@ -20,8 +22,8 @@ CustomElement.register({
                 <div id="row_radical" km:foreach="event in events" class="row event-type">
                     <span class="row-name">{event.type}</span>
                     <div>
-                        <span km:foreach="ev in event.samples">
-                            this is my event -> {ev}!
+                        <span km:foreach="evt in event.samples">
+                            this is my event -> {evt}!
                             <em>test</em>
                         </span>
                     </div>

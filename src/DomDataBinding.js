@@ -1,6 +1,6 @@
 import Signal from "./Signal";
 import CustomElement from "./CustomElement"
-import {createWalker, parseDirectives as getDirectives, setNodeTemplate} from "./TemplateHelpers"
+import {createWalker, parseDirectives as _getDirectives, setNodeTemplate} from "./TemplateHelpers"
 
 // https://github.com/patrick-steele-idem/morphdom/tree/fe35db9adda1f22fe5856e8e0f78048f8f4b0f18/examples/lifecycle-events
 const FOREACH_DIRECTIVE = "foreach"
@@ -115,11 +115,9 @@ export default class DomDataBinding {
     let type = 0
     if (CustomElement.hasAcustomDefinition(node.tagName)) {
       this.initComponent(node.tagName, node)
-      this.updateDirective(node) // watch other
       type = 1
-    } else {
-      this.updateDirective(node)
     }
+    this.updateDirective(node)
     return { type }
   }
 
@@ -245,13 +243,17 @@ export default class DomDataBinding {
     if (!directive || typeof directive.init != "function") {
       throw "Directive not Found!";
     }
-    console.log("--- pensée ---")
-    console.log(directiveConfig)
-    //directive.init(ctx, directiveConfig);
+    try {
+      directive.init(ctx, directiveConfig);
+    } catch(reason) {
+      console.log("applyDirective Exception")
+      console.log(reason)
+    }
+    
   }
 
   getDirectives(node, keys = []) {
-    return getDirectives(node, keys)
+    return _getDirectives(node, keys)
   }
   
   updateModel(node) {
@@ -273,30 +275,18 @@ export default class DomDataBinding {
     let parentDirectives = []
     let mainDirectives = []
     drop = Array.isArray(drop) ? drop : []
-    const attributes = node.attributes
-    /* experiments */
-    // --> skip foreach
-    
+
     /* deal with node directive */
-    const isUndefined = (dir) => dir !== undefined
-    const dparser = this._parseAttrDirective.bind(this)
-    mainDirectives = Array.from(attributes)
-          .map(attr => dparser(attr))
-          .filter(isUndefined)
-          .filter(dir => drop.indexOf(dir.name) == -1)
+    mainDirectives = this.getDirectives(node)//handle dropped directive
 
     if (handleParent && parentNode) {
-      const parentAttr = parentNode.attributes
-      parentDirectives = Array.from(parentAttr)
-        .map(attr => dparser(attr))
-        .filter(isUndefined)
+      parentDirectives = this.getDirectives(parentNode)
     }
     
     let templateDirectives = this._handleTemplateExpressions(node)
-    /* skip foreach directive */
+    /* skip foreach directives */
     
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives]
-    
     allDirectives.map((directive) => {
       try {
 
