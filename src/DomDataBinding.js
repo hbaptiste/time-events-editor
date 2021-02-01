@@ -1,7 +1,8 @@
 import Signal from "./Signal";
 import CustomElement from "./CustomElement"
 import {createWalker, parseDirectives as _getDirectives, setNodeTemplate} from "./TemplateHelpers"
-
+import { registerDirective } from "./DirectiveRegistry"
+// Use the morphdom
 // https://github.com/patrick-steele-idem/morphdom/tree/fe35db9adda1f22fe5856e8e0f78048f8f4b0f18/examples/lifecycle-events
 const FOREACH_DIRECTIVE = "foreach"
 class UITaskQueue {
@@ -235,6 +236,7 @@ export default class DomDataBinding {
 
   static registerDirective(name, api) {
     DomDataBinding.directivesList[name] = api;
+    registerDirective(name, api);
   }
 
   applyDirective({ ctx, directiveConfig}) {
@@ -246,7 +248,7 @@ export default class DomDataBinding {
     try {
       directive.init(ctx, directiveConfig);
     } catch(reason) {
-      console.log("applyDirective Exception")
+      console.log(`Exception while applying ${name} directive !`)
       console.log(reason)
     }
     
@@ -284,12 +286,11 @@ export default class DomDataBinding {
     }
     
     let templateDirectives = this._handleTemplateExpressions(node)
-    /* skip foreach directives */
+    /* skip foreach directives --> as the will be handle elswhere */
     
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives]
     allDirectives.map((directive) => {
       try {
-
         if (directive.name === FOREACH_DIRECTIVE) {
           setNodeTemplate(node)
         }
@@ -305,8 +306,8 @@ export default class DomDataBinding {
   _parseAttrProps(attr) {
     const { name, nodeValue } = attr
     const props = { 
-      name : name,
-      value:nodeValue 
+      name: name,
+      value: nodeValue 
     }
     /* we should deal with callbacks */
     /* child can know what to uses */

@@ -40,7 +40,7 @@ export default class ControlPlugin {
       data: {
         displayEventForm: false,
         displayRowForm: false,
-        displayEventsList: false,
+        displayEventsList: true,
         newRowName: "",
         eventName: "",
         eventStart: "",
@@ -92,9 +92,7 @@ export default class ControlPlugin {
         },
 
         createEvent: ({data}) => {
-          console.log(" createEvent --> radical")
-          console.log(data)
-         return 
+          
           const { eventContent, eventName, eventStart, eventEnd, selectedTag } = data;
           const eventRecord = Object.assign({}, { eventContent, eventName, eventStart, eventEnd });
           

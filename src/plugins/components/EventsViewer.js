@@ -1,25 +1,28 @@
-import CustomElement from '../../CustomElement'
-
+import CustomElement from "../../CustomElement";
 
 CustomElement.register({
-    
-    is: "events-viewer",
-    properties: ["events"],
-    data: {
-        events: [],
-    },
+  is: "events-viewer",
+  properties: ["events"],
+  getStyle: function () {
+    return {
+      root: {
+        border: "1px solid red",
+      },
+    };
+  },
+  data: {
+    events: [],
+  },
 
-    onInit: function() {
-        this.data.events = this.events
-        console.log("-- event viewer --")
-        console.log(this.data)
-    },
+  onInit: function () {
+    this.data.events = this.events;
+  },
 
-    getTemplate : function() {
-        return `
+  getTemplate: function () {
+    return `
             <template>
             <div class="component events-container">
-                <div id="row_radical" km:foreach="event in events" class="row event-type">
+                <!--<div km:foreach="event in events" class="row event-type">
                     <span class="row-name">{event.type}</span>
                     <div>
                         <span km:foreach="evt in event.samples">
@@ -27,8 +30,8 @@ CustomElement.register({
                             <em>test</em>
                         </span>
                     </div>
-                </div>
+                </div>-->
             </div>
-            </template>`
-    }
-})
+            </template>`;
+  },
+});

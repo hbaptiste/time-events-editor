@@ -83,7 +83,7 @@ export default class EventsRegistry {
   }
   _onEnd(event) {
     /* notify ui manager */
-    this.uiManager.send({ type: "END_EVENT", event });
+    this.uiManager.dispatch({ type: "END_EVENT", event });
   }
 
   edit(Event) {}
