@@ -1,37 +1,40 @@
 import MicroTask from "./MicroTask";
 
-
 class DirectiveRegistry {
-    constructor() {
-        this.queue = new MicroTask();
-        this.directivesMap = new Map();
-    }
-    
-    registerDirective(name, directiveApi) {
-        this.directivesMap.set(name, directiveApi);
-    }
+  constructor() {
+    this.queue = new MicroTask();
+    this.directivesMap = new Map();
+  }
 
-    getDirective(name) {
-        return this.directivesMap.get(name)
-    }
+  registerDirective(name, directiveApi) {
+    this.directivesMap.set(name, directiveApi);
+  }
 
-    applyDirective({ctx, data}) {
-        const { name } = data;
-        const directive = this.directivesMap.get(name) || null;
-        if (!directive || typeof directive.init != "function") {
-            throw "Directive not Found!";
-        }
-        try {
-            directive.init(ctx, data);
-        } catch(reason) {
-            console.log(`Exception while applying ${name} directive !`)
-            console.log(reason)
-        }
+  getDirective(name) {
+    return this.directivesMap.get(name);
+  }
+
+  applyDirective({ ctx, data }) {
+    const { name } = data;
+    const directive = this.directivesMap.get(name) || null;
+    if (!directive || typeof directive.init != "function") {
+      throw "Directive not Found!";
     }
+    try {
+      directive.init(ctx, data);
+    } catch (reason) {
+      console.log(`Exception while applying ${name} directive !`);
+      console.log(reason);
+    }
+  }
 }
 
+// API
 const directiveRegistry = new DirectiveRegistry();
-const registerDirective = directiveRegistry.registerDirective.bind(directiveRegistry);
+const registerDirective = directiveRegistry.registerDirective.bind(
+  directiveRegistry
+);
 const getDirective = directiveRegistry.getDirective.bind(directiveRegistry);
 const applyDirective = directiveRegistry.applyDirective.bind(directiveRegistry);
+
 export { registerDirective, getDirective, applyDirective };

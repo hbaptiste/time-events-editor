@@ -1,34 +1,36 @@
 import DomDataBinding from "./DomDataBinding";
 import _ from "./Common.Binding";
-import ContentPanel from "./plugins/components/ContentPanel"
-import Time from "./plugins/components/Time"
-import EventsViewer from "./plugins/components/EventsViewer"
+import ContentPanel from "./plugins/components/ContentPanel";
+import Time from "./plugins/components/Time";
+import EventsViewer from "./plugins/components/EventsViewer";
 import { initEventsFixtures } from "./fixtures";
 import TimelineFactory from "./TimelineFactory";
 import UiManager from "./UiManager";
 import EventsRegistry from "./EventsRegistry";
 import ControlPlugin from "./plugins/ControlPlugin";
+import EventForm from "./plugins/components/EventForm";
+import EventsRow from "./plugins/components/EventsRow";
 
 import "./css/style.css";
 
 /* Timeline */
-const initTimeline = function({ tl, video, tlSize }) {
+const initTimeline = function ({ tl, video, tlSize }) {
   tl.create({ duration: video.duration, repeat: true });
 
-  video.addEventListener("play", e => {
+  video.addEventListener("play", (_e) => {
     tl.start();
   });
 
-  video.addEventListener("pause", e => {
+  video.addEventListener("pause", (e) => {
     tl.stop();
   });
 
-  video.addEventListener("seeked", e => {
+  video.addEventListener("seeked", (e) => {
     tl.goto(video.currentTime * 1000); //currentTime is in sec
   });
 
   /*** UI in milliseconde ***/
-  tl.onStep(e => {
+  tl.onStep((e) => {
     const { step } = e;
     updateUi({ step, ...rateInfos });
   });
@@ -39,7 +41,7 @@ const initTimeline = function({ tl, video, tlSize }) {
   const eventsRegistry = new EventsRegistry({
     timelineMng: tl,
     uiManager: uiManager,
-    rateInfos
+    rateInfos,
   });
 
   uiManager.eventsRegistry = eventsRegistry;
@@ -49,7 +51,7 @@ const initTimeline = function({ tl, video, tlSize }) {
   uiManager.use(ControlPlugin);
 };
 
-const updateUi = function({ step, duration, tlSize }) {
+const updateUi = function ({ step, duration, tlSize }) {
   const normDuration = duration * 1000;
   const STEP_RATE = tlSize / normDuration;
   const indicator = document.querySelectorAll(".indicator")[0];
@@ -62,5 +64,7 @@ const tl = new TimelineFactory();
 const video = document.querySelector("#mainvideo_html5_api");
 /* init Timeline */
 //setTimeout(() => {
-  initTimeline({ tl, video, tlSize: 500 });
+  document.body.onload = function() {
+    initTimeline({ tl, video, tlSize: 500 });
+  };
 //}, 500);

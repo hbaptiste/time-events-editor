@@ -1,4 +1,5 @@
 export default class TimelineFactory {
+  
   constructor() {
     this.callbacksRegistry = { "*": [] };
     this.TIMELINE_STEP = 5;
@@ -10,7 +11,7 @@ export default class TimelineFactory {
   }
 
   create(params) {
-    this.params = params; //do check
+    this.params = params; // do check
     const { duration, repeat } = params;
     this.repeat = repeat;
     this._init(duration);
@@ -24,8 +25,9 @@ export default class TimelineFactory {
   }
 
   start() {
-    this.state.playing = true;
+    this.state = {...this.state, playing: true };
     this._init();
+    
   }
 
   stop() {
@@ -42,30 +44,29 @@ export default class TimelineFactory {
 
   onStep(callback) {
     if (typeof callback === "function") {
+
       this.callbacksRegistry["step"] = callback;
     }
   }
 
   _isPlaying() {
-    //console.log(`Is playing ${this.state.playing}!`)
     return this.state.playing;
   }
 
-  _startLoop() {}
   _init(duration) {
     if (this._intervalId) {
       clearInterval(this._intervalId);
     }
     this._intervalId = setInterval(() => {
-      if (!this._isPlaying()) return false;
-      /* time never flies and stops*/
+      if (this._isPlaying() === false) return false;
+      /* time never flies and stops */
       this.state.step += this.TIMELINE_STEP;
       if (this.state.step % this.TIMELINE_UNIT === 0) {
         const previousState = { ...this.state };
         this.state.position = previousState.position + 1;
-        /* notification */
+        
         this._handleEvents({ ...this.state });
-        /* stop condition */
+        
         if (this.state.position === duration) {
           if (!this.repeat) {
             clearInterval(this._intervalId);
@@ -78,17 +79,24 @@ export default class TimelineFactory {
       this._notifyStepEvent();
     }, this.TIMELINE_STEP);
   }
-
+  // should be -> * <-
   _notifyStepEvent() {
-    const cb = this.callbacksRegistry["step"];
-    if (typeof cb === "function") {
-      cb({ step: this.state.step });
-      this.stop();
+    const cbList = this.callbacksRegistry["*"];
+    if (Array.isArray(cbList)) {
+      cbList.map((cb) => {
+        try {
+          cb({ position: this.state.step });
+        } catch(e) {
+          console.log("-- error --");
+          console.log(e);
+        }
+      });
     }
   }
   _reset() {
     this.state.position = 0;
     this.state.step = 0;
+    this.state = { ...this.state, position: 0, stop: 0}
   }
 
   _handleEvents({ position: currentPosition }) {
@@ -99,6 +107,7 @@ export default class TimelineFactory {
       }
     });
   }
+
   _executeAll(list, position) {
     list.map(cb => {
       try {
@@ -114,7 +123,7 @@ export default class TimelineFactory {
       return;
     }
     if (typeof position === "number") {
-      /*handle position 1.2, 3.2*/
+      /* handle position 1.2, 3.2 */
       const cbsList = this.callbacksRegistry[`position_${position}`] || [];
       cbsList.push(callback);
       this.callbacksRegistry[`position_${position}`] = cbsList;

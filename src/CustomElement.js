@@ -1,20 +1,25 @@
 import DomDataBinding from "./DomDataBinding";
+import Provider from "./Provider";
 import jss from "jss";
 import preset from "jss-preset-default";
+
 jss.setup(preset());
 
 const _handleProps = function (component, params) {
-  const { properties, target, _props_ } = params; //handle prop type of
+  const { properties, target, _props_=[] } = params; //handle prop type of
   if (!target) {
     return false;
   }
 
+  //why props can't be null
   params.props = {};
   properties.map((prop) => {
-    const propsInfos = _props_.find((current) => current.name === prop);
-    if (propsInfos) {
-      const { name, value } = propsInfos;
-      params.props[name] = value;
+    if (Array.isArray(_props_)) {
+        const propsInfos = _props_.find((current) => current.name === prop);
+        if (propsInfos) {
+        const { name, value } = propsInfos;
+        params.props[name] = value;
+      }
     }
   });
   delete params._props_;
@@ -47,11 +52,13 @@ const _handleStyle = function (component, params) {
     //return style, meta
     const componentStyle = getStyle();
     const sheet = jss.createStyleSheet(componentStyle, {
-      meta: "content-panel",
+      meta: component.is,
     });
     sheet.attach();
     params.__sheet__ = sheet;
   }
+};
+const _watchParents = function (component, props) {
 };
 
 class CustomElement {
@@ -60,18 +67,22 @@ class CustomElement {
 
   constructor(params) {
     this.mailBox = [];
+    this.children = [];
+    this.$injected = {};
     _handleProps(this, params);
     _handleStyle(this, params);
     _handleTarget(this, params);
     Object.assign(this, {}, params);
     this.$binding = DomDataBinding.applyMixin({ target: this, skipRoot: true });
     this.onInit();
+    // _watchParents(this, params); //
     this.declareSideEffects();
+    this.$binding.flush(); // call OnOnit on children
+    // @tofix: empêcher conflict properties/data
   }
 
   sendMessage(message, payload) {
     /* check if message type exist */
-    /* msg -> async */
     /* msg event when is complete */
     /* - . - . - . - . - */
   }
@@ -85,9 +96,17 @@ class CustomElement {
   }
   onInit() {}
 
-  onLinked() {} // when the root is on the Dom
+  onLinked() {} // @todo when the root is on the Dom
 
-  onOnlink() {} // when the root is removed from the dom
+  unlinked() {} // @todo when the root is removed from the dom
+
+  provide(name, data) {
+    Provider.register(name, data, this);
+  }
+
+  useProvider(name) {
+    Provider.useProvider(name, this);
+  }
 
   invoke(method, ...params) {
     if (typeof this[method] !== "function") {
@@ -99,17 +118,71 @@ class CustomElement {
   // useful
   declareSideEffects() {}
 
+  getValue(path) {
+    const [root, ...rest] = path.split(".");
+    const source = this[root] || this.data[root]; // -> root > data
+
+    if (source && Array.isArray(rest) && rest.length !== 0) {
+      const value = rest.reduce((acc, pathItem) => {
+        const value = source[pathItem];
+        return value;
+      }, source);
+
+      return value;
+    }
+
+    return source;
+  }
+
+  setValue(path, value) {
+    const [root, ...rest] = path.split(".");
+    const source = this[root] || this.data[root]; // harmoniser
+    const propsTarget = this.hasOwnProperty(root) ? "props" : "data"; // -> target props/data
+
+    if (source) {
+      rest.reduce((acc, pathItem, index) => {
+        if (index === rest.length - 1) {
+          acc[pathItem] = value;
+          return acc;
+        } else {
+          return source[pathItem] || {};
+        }
+      }, source);
+      if (propsTarget === "props") {
+        this[root] = { ...source };
+      } else {
+        this.data[root] = { ...source };
+      }
+    }
+  }
+  // get all props data
+  getTemplateData() {
+    const props = {}
+    this.properties.map((name) => {
+      props[name] = this.getValue(name)
+    });
+    return {...this.data, ...props};
+  }
+  // Handle context
   registerSideEffects(func, deps) {
     func = func.bind(this);
+    console.log("--- d/e/ps ---");
+    console.log(deps);
     this.$binding.signals.dataChanged.connect((key) => {
       if (deps.includes(key)) {
         const values = deps.map((dep) => this.data[dep]);
         func(...values);
       }
     });
+    this.$binding.signals.propsChanged.connect((key) => {
+      if (deps.includes(key)) {
+        const values = deps.map((dep) => this[dep]); //?
+        func(...values);
+      }
+    });
     /* -- first call -- */
-    const values = deps.map((dep) => this.data[dep]);
-    func(...values);
+    const dataValues = deps.map((dep) => this[dep]); //props values
+    func(...dataValues);
   }
 
   static create(params) {
@@ -118,9 +191,7 @@ class CustomElement {
 
   static createFromNode({ componentName, target, props }) {
     // render new element
-    const componentConf = CustomElement.elementsRegistry.get(
-      componentName.toLowerCase()
-    );
+    const componentConf = CustomElement.elementsRegistry.get(componentName.toLowerCase());
     if (!componentConf) {
       return;
     }

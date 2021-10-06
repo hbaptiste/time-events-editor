@@ -59,6 +59,7 @@ export default function DomDiff(currentTree, newTree, patches = [], parent) {
       parentNode: parent,
     });
   } else if (!newTree) {
+    console.log("newTree is EMPTY");
     Array.from(currentTree.childNodes).forEach((node) => {
       patches.push({ type: "REMOVE_NODE", target: node });
     });
@@ -124,7 +125,8 @@ const fnMap = {
   },
 
   REMOVE_NODE: ({ target }) => {
-    console.log("-- radical blaze --");
+    console.log("-- DOM:Diff -- REMOVE_NODE --");
+    console.log(target);
     console.log(target.parentNode);
     target.parentNode.removeChild(target);
   },

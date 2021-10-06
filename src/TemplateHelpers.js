@@ -1,10 +1,11 @@
 import Context from "./Context";
 import { applyDirective } from "./DirectiveRegistry";
-import { DomDiff, applyPatches } from "./DomDiff";
+import CustomElement from "./CustomElement";
+import { createIterator } from "./Utils";
 
 const templateRecords = new Map();
 const renderedItemsRecords = new Map();
-
+const PROPS_DIRECTIVE = "props:watcher";
 const getId = (function (prefix = "item") {
   let counter = 0;
   return function () {
@@ -22,10 +23,7 @@ const setNodeTemplate = function (node) {
 
 // parse directive
 const _parseDirectiveValue = function (value) {
-  const itemReg = new RegExp(
-    /(\w+)\sin\s([a-zA-Z0-9_]+(\.[a-zA-Z0-9_]*)*)/,
-    "gm"
-  );
+  const itemReg = new RegExp(/(\w+)\sin\s([a-zA-Z0-9_]+(\.[a-zA-Z0-9_]*)*)/, "gm");
   const [_, localName, parentName] = itemReg.exec(value);
   return { localName, parentName };
 };
@@ -45,16 +43,14 @@ const _parseEventsValue = function (value) {
   }
 };
 
-const LONG_DIRECTIVE_PATTERN = /(\w+):(\w+)=(.*)/i; //[\"\w\s\.\"]+
-const SHORT_DIRECTIVE_PATTERN = /@(\w+)(:\w+)?=(.*)/i; //!?\w+
+const LONG_DIRECTIVE_PATTERN = /(\w+):(\w+)=(.*)/i; 
+const SHORT_DIRECTIVE_PATTERN = /@(\w+)(:\w+)?=(.*)/i;
+const PROPS_DIRECTIVE_PATTERN = /^\$(\w+)=(\w+)/i;
 
 const isNormalAttribute = function (attr) {
   const { name, value } = attr;
   const attrString = `${attr.name}=${attr.value}`;
-  if (
-    LONG_DIRECTIVE_PATTERN.test(attrString) ||
-    SHORT_DIRECTIVE_PATTERN.test(attrString)
-  ) {
+  if (LONG_DIRECTIVE_PATTERN.test(attrString) || SHORT_DIRECTIVE_PATTERN.test(attrString)) {
     return false;
   }
   if (name.startsWith("@") || name.startsWith("$")) {
@@ -62,12 +58,25 @@ const isNormalAttribute = function (attr) {
   }
   return true;
 };
+// _parseStyleValue
+const _parseStyleValue = function(value) {
+  // function / object
+  const stylesPattern = {
+    REACTIVE_CALLBACK: new RegExp(/(\w+)(\((.*?)\))/, "gm") 
+  }
+  const result = stylesPattern.REACTIVE_CALLBACK.exec(value);
+  if (!result) { return false }
+  const [_, name ,__, params] = result;
+  const type = params ? "callback" : "props";
+  return { name, type, params: params.split(",") }
+}
 
 // parse value
 const _parseValue = function (value, name) {
   const patterns = {
     click: _parseEventsValue,
     foreach: _parseDirectiveValue,
+    style: _parseStyleValue
   };
   const idFunction = (id) => id;
   const valueParser = patterns[name] || idFunction;
@@ -80,8 +89,8 @@ const _parseAttrDirective = function (attr) {
   const directivePatterns = {
     longPattern: LONG_DIRECTIVE_PATTERN,
     shortPattern: SHORT_DIRECTIVE_PATTERN,
+    propsPattern: PROPS_DIRECTIVE_PATTERN,
   };
-
   const infos = Object.keys(directivePatterns).map((key) => {
     const pattern = directivePatterns[key];
     const result = pattern.exec(attrString);
@@ -90,7 +99,6 @@ const _parseAttrDirective = function (attr) {
       name,
       modifier,
       value = null;
-
     if (!result) {
       return;
     }
@@ -99,6 +107,14 @@ const _parseAttrDirective = function (attr) {
     }
     if (key === "shortPattern") {
       [_, name, modifier, value] = result;
+    }
+    if (key === "propsPattern") {
+      const [_, targetProp, sourceProp] = result;
+      name = "props:watcher";
+      value = {
+        targetProp,
+        sourceProp,
+      };
     }
     value = _parseValue(value, name);
     /* directive */
@@ -148,22 +164,24 @@ const getNodeTemplate = function (node) {
 };
 
 const parseTextNodeExpressions = function (textContent) {
-  const execPattern = new RegExp("{.*?}", "g");
+  const pattern = new RegExp("{.*?}", "gm");
   const strings = [];
   let nextStart = 0;
   let tokens = [];
+  let prevString = "";
   let token;
-  while ((token = execPattern.exec(textContent)) !== null) {
+  while ((token = pattern.exec(textContent)) !== null) {
     const exp = parseTemplateExpr(token) || {};
     const [match] = token;
-    const prevString = textContent.substring(nextStart, token.index);
+    prevString = textContent.substring(nextStart, token.index);
     nextStart = token.index + match.length;
     strings.push([prevString, exp]);
     strings.push([match, exp]);
-    if (nextStart < textContent.length) {
-      strings.push([textContent.substring(nextStart), exp]);
-    }
   }
+  if (nextStart < textContent.length) {
+    strings.push([textContent.substring(nextStart), {}]);
+  }
+
   if (strings.length !== 0) {
     strings.map(([item, exp]) => {
       const itemExp = item.startsWith("{") ? exp : {};
@@ -268,15 +286,25 @@ const parseSection = function (node) {
   /* create Node */
   const createNode = function (node) {
     const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName;
-
+    const isCustom = CustomElement.hasAcustomDefinition(node.nodeName) ? true : false;
+    let _node;
     if (nodeType === "TEXT") {
-      return {
+      _node = {
         type: "element",
         name: nodeType,
         value: node.textContent,
       };
+    } else if (isCustom) {
+      _node = {
+        type: "custom-element",
+        name: nodeType,
+        children: [],
+        directives: parseDirectives(node),
+        attributes: parseAttributes(node),
+        node,
+      };
     } else {
-      return {
+      _node = {
         type: "element",
         name: nodeType,
         children: [],
@@ -285,6 +313,7 @@ const parseSection = function (node) {
         node,
       };
     }
+    return _node;
   };
   /* -- find -- */
   let previousNode = null;
@@ -359,16 +388,18 @@ const updateSectionInfos = function (node) {
 
 /* made recursive */
 const renderSection = function ({ ctx, node, data }) {
-  const rootCtx = new Context(ctx.target.data);
   if (Array.isArray(data) && data.length === 0) {
     return;
   }
+  const rootCtx = new Context(ctx.target.getTemplateData());
+
   const ast = parseSection(node);
-  console.log("--- A/S/T ---");
-  console.log(ast);
   /* setting contexts */
   const enterVisitor = (node, parent) => {
     switch (node.type) {
+      case "custon-element":
+        node.ctx = node.ctx || parent.ctx;
+        break;
       case "element":
         node.ctx = node.ctx || parent.ctx;
         break;
@@ -378,9 +409,8 @@ const renderSection = function ({ ctx, node, data }) {
         const { name } = node;
         let data = [];
         const newChildren = [];
-
         if (!parent) {
-          data = rootCtx.lookup(parentName);
+          data = rootCtx.lookup(parentName) || [];
           node.ctx = rootCtx.createFrom({ [localName]: data });
         } else if (node.ctx !== null || parent.ctx) {
           const itemCtx = node.ctx || parent.ctx;
@@ -388,11 +418,21 @@ const renderSection = function ({ ctx, node, data }) {
           node.ctx = itemCtx.createFrom({ [localName]: data });
         }
         /* populate */
+        // eslint-disable-next-line no-case-declarations
         let di = 0;
-        data.forEach(function (item) {
+        // eslint-disable-next-line no-case-declarations
+        const iterable = createIterator(data);
+        while (iterable.hasNext()) {
+          const item = iterable.next();
+          const $index = iterable.cursor;
+          const currentItem = Array.isArray(item) ? item[1] : item;
+          const $key = Array.isArray(item)? item[0] : $index;
+          console.log("----$key-$index----");
+          console.log($key, $index);
           const nodeFunc = (function (_item_) {
             return function (i) {
               let itemCtx = node.ctx.createFrom({ [localName]: _item_ });
+              itemCtx.extends({$key, $index});
               return {
                 name,
                 ctx: itemCtx,
@@ -403,13 +443,14 @@ const renderSection = function ({ ctx, node, data }) {
                 children: [],
               };
             };
-          })(item);
+          })(currentItem);
           const newNode = nodeFunc(di);
           newChildren.push(newNode);
           di++;
-        });
+        }
+
         /* transform */
-        newChildren.map((parent) => {
+     newChildren.map((parent) => {
           const childrenCopy = JSON.parse(JSON.stringify(node.children));
           parent.children = childrenCopy.map(function (_child_) {
             _child_.key = parent.key;
@@ -437,6 +478,7 @@ const renderSection = function ({ ctx, node, data }) {
     }
   };
   const domData = visit(ast, { enterVisitor, exitVisitor });
+
   return compile(domData, ctx);
 };
 
@@ -537,11 +579,24 @@ const getEval = function (ctx) {
   };
 };
 
+const _propsFromDirectives = function (node) {
+  const { directives } = node;
+  const props = directives.filter((directive) => directive.name == PROPS_DIRECTIVE).pop();
+  return props;
+};
 /* */
 const compile = function (ast, domBindingCtx) {
   const genCode = function (node) {
     const stm = [];
     switch (node.type) {
+      case "custom-element":
+        const props = _propsFromDirectives(node);
+        const { ctx: dataContext } = node;
+        return () => {
+          const  renderedNode = domBindingCtx.renderBlock(node, dataContext);
+          return renderedNode;
+        };
+        /** test directive */
       case "element":
         switch (node.name) {
           case "TEXT":
@@ -552,7 +607,7 @@ const compile = function (ast, domBindingCtx) {
                 const { ctx } = node;
                 tokens.map((token) => {
                   const { exp = null } = token;
-                  const value = exp ? ctx.lookup(exp) : token.value;
+                  const value = exp ? ctx.lookup(exp) || "" : token.value;
                   const text = document.createTextNode(value);
                   element.appendChild(text);
                 });
@@ -576,18 +631,17 @@ const compile = function (ast, domBindingCtx) {
                   }
                 });
                 /* directive */
-                directives.forEach((data) => {
-                  data.node = element;
+                directives.forEach((directive) => {
+                  directive.node = element;
                   const { ctx } = node;
-                  data.dataContext = ctx;
-                  applyDirective({ ctx: domBindingCtx, data });
+                  directive.dataContext = ctx;
+                  applyDirective({ ctx: domBindingCtx, data: directive });
                 });
                 return element;
               };
             })(node);
             return defaultStm;
         }
-        break;
       case "fragment":
         let stmFrag = "";
         if (node.isRoot) {
@@ -650,20 +704,6 @@ const tokenize = function (template) {
     return [];
   }
 };
-
-/* scan the template string -> tokens */
-class Scanner {
-  constructor(string) {
-    this.string = string;
-    this.tail = string;
-    this.pos = 0;
-  }
-  scan() {}
-  isEos() {
-    return this.pos === this.string.length - 1;
-  }
-  scanUntil() {}
-}
 
 export {
   parse,

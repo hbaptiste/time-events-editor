@@ -1,12 +1,7 @@
 import DomDataBinding from "./DomDataBinding";
 import CustomElement from "./CustomElement";
-import {
-  parse as templateParser,
-  setRenderedItems,
-  getRenderedItems,
-  renderSection,
-} from "./TemplateHelpers";
-import { indexOf, isBuffer, lowerFirst } from "lodash";
+import Context from "./Context";
+import { parse as templateParser, setRenderedItems, getRenderedItems, renderSection } from "./TemplateHelpers";
 import { DomDiff, applyPatches, listToFragment } from "./DomDiff";
 
 /* counter */
@@ -19,9 +14,10 @@ const getCounter = (function () {
   };
 })();
 
-/**
- * renderIf
- * */
+/* set value */
+const setValue = (target, path, defaultValue) => {
+  notify(); // root
+};
 
 DomDataBinding.registerDirective("event", {
   init: (ctx, { node, value, modifier }) => {
@@ -41,15 +37,20 @@ DomDataBinding.registerDirective("click", {
     if (typeof callback !== "function") {
       throw `@click [${value}] -> callback must be a function!`;
     }
-    const eventParams =
-      params.indexOf("$event") == -1 ? ["$event", ...params] : params;
+
+    const eventParams = params.indexOf("@event") == -1 ? ["@event", ...params] : params;
+
 
     node.addEventListener("click", (event) => {
       const ctxParams = eventParams.map((param) => {
-        if (param === "$event") {
+        if (param === "@event") {
           return event;
         } else {
-          return dataContext.lookup(param);
+          let data = ctx.target.getValue(param)
+          if (data === null && dataContext) {
+            data = dataContext.lookup(param);
+          }
+          return data;
         }
       });
       callback.call(ctx.target, ...ctxParams);
@@ -90,7 +91,7 @@ DomDataBinding.registerDirective("foreach", {
 
     let parentNode = node.parentNode;
     const templateKey = node.dataset.templateKey;
-
+    
     const createListHandler = function (params) {
       return function () {
         const { ctx, values, sourceVariable, itemKey } = params;
@@ -99,6 +100,7 @@ DomDataBinding.registerDirective("foreach", {
           savedList = [],
           previousSection;
         dataList = ctx.target.data[parentName] || values;
+
         if (!dataList) {
           return;
         }
@@ -112,28 +114,27 @@ DomDataBinding.registerDirective("foreach", {
           });
         } else {
           const renderedData = getRenderedItems(templateKey);
+          // getList
+          const getRederedList = () => {
+            return document.querySelectorAll(`[data-template-key='${templateKey}']`);
+          };
+
           if (renderedData) {
             previousSection = renderedData.domSection;
             target = renderedData.placeHolder;
-            console.log("-- rendered-data --");
-            console.log(renderedData);
           }
           /** place holder */
-          let placeHolder = target || node;
+          let placeHolder = target && target.parentNode ? target : node;
           const emptyPlaceHolder = document.createElement("template");
 
           let domSection = renderSection({
             ctx,
-            data: values,
+            data: dataList, // values
             node,
             localName,
             parentName,
           });
-
           const patches = DomDiff(previousSection, domSection);
-          console.log("---radicalpatches---");
-          console.log(patches);
-
           if (!patches) {
             return;
           }
@@ -141,21 +142,18 @@ DomDataBinding.registerDirective("foreach", {
           if (patch && patch.type === "KEEP_NODE") {
             if (!patch.source.childNodes.length) {
               placeHolder.replaceWith(emptyPlaceHolder);
-              savedList.push(emptyPlaceHolder);
-              const fragment = listToFragment(savedList);
               setRenderedItems(templateKey, {
                 placeHolder: emptyPlaceHolder,
-                domSection: fragment,
+                domSection: null,
               });
             } else {
               Array.from(patch.source.childNodes).forEach((_node) => {
-                //_node.classList.add(templateKey);
                 savedList.push(_node);
               });
-              //if (placeHolder.parentNode) {
-              // why it can be  null ?
+
+              // why it can be null ?
               const parentnode = placeHolder.parentNode;
-              placeHolder.parentNode.insertBefore(domSection, placeHolder); //fragment -> empty after insertion
+              placeHolder.parentNode.insertBefore(domSection, placeHolder); // fragment -> empty after insertion
               placeHolder.parentNode.removeChild(placeHolder);
               savedList = listToFragment(savedList);
               savedList.targetParentNode = parentnode;
@@ -164,36 +162,30 @@ DomDataBinding.registerDirective("foreach", {
                 domSection: savedList,
               };
               setRenderedItems(templateKey, data);
-              // }
             }
           } else {
             // Preseve the placeholder
             let listPlaceHolder;
-            let list = document.querySelectorAll(
-              `[data-template-key='${templateKey}']`
-            );
-            if (list.length > 0) {
-              // we add placeholder in case the list use position
-              const [head] = list;
+            let previousList = getRederedList();
+            if (previousList.length > 0) {
+              // we add placeholder in case the list
+              const [head] = previousList;
               listPlaceHolder = document.createElement("template");
               head.parentNode.insertBefore(listPlaceHolder, head);
             }
             applyPatches(patches);
 
             // get the new dom state
-            list = document.querySelectorAll(
-              `[data-template-key='${templateKey}']`
-            );
-            if (list.length > 0) {
-              listPlaceHolder.parentNode.removeChild(listPlaceHolder);
+            const listAfter = getRederedList();
+            if (listAfter.length > 0) {
+              listPlaceHolder.parentNode.removeChild(listPlaceHolder); // not needed
             }
             // if list is null
-            const savedList = list.length ? listToFragment(list) : null;
+            const savedList = listAfter.length ? listToFragment(listAfter) : null;
 
             if (savedList) {
-              savedList.targetParentNode = list[0].parentNode;
+              savedList.targetParentNode = listAfter[0].parentNode;
             }
-
             const data = {
               placeHolder: listPlaceHolder,
               domSection: savedList,
@@ -204,11 +196,10 @@ DomDataBinding.registerDirective("foreach", {
       };
     };
 
-    /* handle list changes */
-    ctx.signals.dataChanged.connect((key, value) => {
-      if (key !== parentName) {
-        return false;
-      }
+   
+    // |--> handle value changed 
+    ctx.signals.valueChanged.connect(({ key, value }) => {
+      if (key !== parentName) { return false; }
       createListHandler({
         ctx,
         sourceKey: key,
@@ -216,13 +207,12 @@ DomDataBinding.registerDirective("foreach", {
         values: value,
       })();
     });
+
     try {
-      const func = () => {};
-      ctx.queued(
-        func /*createListHandler({context:ctx, sourceVariable, itemKey})*/
-      );
+      const func = () => { return };
+      ctx.queued(func);
     } catch (reason) {
-      console.log("-- reason --");
+      console.log("-- render reason --");
       console.log(reason);
     }
   },
@@ -235,7 +225,40 @@ DomDataBinding.registerDirective("model", {
 
     // deal with reverse binding
     const nodeType = node.tagName;
-    if (nodeType === "SELECT") {
+    switch (nodeType) {
+      case "TEXTAREA":
+        ctx.signals.dataChanged.connect((dataKey, keyValue) => {
+          node.value = keyValue;
+        });
+        // handle changed
+        node.addEventListener("keyup", (event) => {
+          ctx.target.setValue(key, event.target.value);
+        });
+        break;
+      case "SELECT":
+        break;
+      case "INPUT":
+      default:
+        const handleValue = (dataKey, dataValue) => {
+          const [root] = key.split(".");
+          if (dataKey !== root) {
+            return false;
+          }
+          if (node.textContent === ctx.target.getValue(key)) {
+            return;
+          }
+          console.log(`data-value ${dataValue}!`);
+          node.textContent = ctx.target.getValue(key);
+        };
+
+        node.addEventListener("keyup", (event) => {
+          ctx.target.setValue(key, event.target.textContent);
+        });
+
+        ctx.signals.dataChanged.connect(handleValue);
+        ctx.signals.propsChanged.connect(handleValue);
+    }
+    /*if (nodeType === "SELECT") {
       ctx.signals.dataChanged.connect((dataKey, keyValue) => {
         if (dataKey !== key) return false;
         const computation = function () {
@@ -266,9 +289,10 @@ DomDataBinding.registerDirective("model", {
           };
         })(key)
       );
-    } //handle radio
+    } */
   },
 });
+
 /* directive show produce a change promise */
 /**
  * target -> node
@@ -285,24 +309,91 @@ DomDataBinding.registerDirective("value", {
   },
 });
 
+/* test geValue */
+const getValue = (source, path) => {
+  const value = path.reduce((acc, pathItem) => {
+    const value = source[pathItem];
+    return value;
+  }, source);
+
+  return value;
+};
+
 /* test a special kind of directive */
 DomDataBinding.registerDirective("template:value", {
   init: function (ctx, { node, value }) {
-    const target = value; //value can be an expression
-    ctx.signals.dataChanged.connect((key, value) => {
-      if (target === `{${key}}`) {
-        ///handle key with dot
-        node.textContent = value;
+    const valueHandler = (key, val) => {
+      const path = value.replace("{", "").replace("}", "").split(".");
+      const [root, ...rest] = path;
+      if (key === root) {
+        // Handle key with dots --> should read from context 
+        const nodeVal = val && rest.length !== 0 ? getValue(val, rest) : val;
+        node.textContent = nodeVal;
       }
-    });
+    };
+    // connect signals
+    ctx.signals.dataChanged.connect(valueHandler);
+    ctx.signals.propsChanged.connect(valueHandler);
   },
 });
 
 // is directive is a step toward custom elements
 DomDataBinding.registerDirective("is", {
   init: function (ctx, { node, value: component }) {
-    CustomElement.createFromDirective(component, { ctx, node });
+    // CustomElement.createFromDirective(component, { ctx, node });
   },
+});
+
+// Props directive
+DomDataBinding.registerDirective("props:watcher", {
+  init: function (ctx, { node, value, component, dataContext }) {
+    ctx.signals.dataChanged.connect((key, val) => {
+      if (!component) {
+        return null;
+      }
+      if (key === value.sourceProp) {
+        component[value.targetProp] = val;
+      }
+    });
+    ctx.signals.propsChanged.connect((key, val) => {
+      if (key === value.sourceProp) {
+        component[value.sourceProp] = val;
+      }
+    });
+    // init data context
+    if (dataContext) {
+      const val = dataContext.lookup(value.sourceProp);
+      setTimeout(() => {
+        component[value.targetProp] = val; // we notify the change here
+      }, 5000);
+     
+    }
+  },
+});
+
+DomDataBinding.registerDirective("style", {
+  
+  init: function(ctx, { node, value, component, dataContext }) {
+    const {type, name, params } = value;
+      // when props changes -> call functions
+      ctx.signals.valueChanged.connect(({ key, value }) => {
+        if (key.indexOf(params) !== -1) {
+          if (type !== 'callback') { return }
+            const func = component[name];
+            const _params = params.map((prop) => {
+              return component.getValue(prop);
+            });
+            const styleObject = func.call(component, ..._params);
+            if (styleObject) {
+              Object.entries(styleObject).forEach(([k,v]) => {
+                node.style[k]= v;
+              });
+            }
+            console.log(styleObject);
+        }
+      });
+  }
+
 });
 
 export {};

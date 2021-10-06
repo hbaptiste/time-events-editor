@@ -26,9 +26,11 @@ export default class UiManager {
     instance.init();
     this.signals.init.emit(this.controlContainer); //use persistent
   }
+  
   _createWrapper() {
     return document.createElement("div");
   }
+
   _createRow(data) {
     const { event } = data;
     const rowKey = lodash.chain(event.rowName).snakeCase();

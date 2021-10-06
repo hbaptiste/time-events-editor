@@ -1,3 +1,4 @@
+import { template } from "lodash";
 import CustomElement from "../../CustomElement";
 
 const myStyle = {
@@ -38,6 +39,7 @@ const componentStyle = function (theme) {
     },
   };
 };
+
 CustomElement.register({
   is: "content-panel",
   properties: ["title", "messages"],
@@ -58,7 +60,6 @@ CustomElement.register({
       const previousMessage = [...this.data.messagesList];
       const index = previousMessage.indexOf(item);
       previousMessage.splice(index, 1);
-      console.log(previousMessage);
       this.data.messagesList = [...previousMessage];
     },
 
@@ -102,25 +103,26 @@ CustomElement.register({
   },
 
   getTemplate: function (classes) {
-    return `<template>
-                    <div class='${classes.root}'>
-                        <ul class="main-list-wrapper">
-                            <li class="${classes.list}" @click="onRemove($event, item)" km:foreach="item in messagesList">
-                                <p class="${classes.paragraph}">
-                                    mon titre->{title}
-                                </p>
-                                <p>duration { item.duration | handleDuration }</p>
-                                <p><em>Type : {item.type}</em>!</pw x>
-                                <p>content: {item.data.content}!</p> 
-                                <span>{item.data.content}</span>
-                            </li>
-                        </ul>
-                        <div class="${classes.btn}">
-                            <p class='btn'><a @click="onAdd">Add</a></p>
-                            <p class='btn'><a @click="onClear">Clear All</a></p>
-                        </div>
+    return `<template></template>;`;
+    /*return `<template>
+              <div class='${classes.root}'>
+                    <ul class="main-list-wrapper">
+                        <li class="${classes.list}" @click="onRemove($event, item)" km:foreach="item in messagesList">
+                            <p class="${classes.paragraph}">
+                                mon titre->{title}
+                            </p>
+                            <p>duration { item.duration | handleDuration }</p>
+                            <p><em>Type : {item.type}</em>!</pw x>
+                            <p>content: {item.data.content}!</p> 
+                            <span>{item.data.content}</span>
+                        </li>
+                    </ul>
+                    <div class="${classes.btn}">
+                        <p class='btn'><a @click="onAdd">Add</a></p>
+                        <p class='btn'><a @click="onClear">Clear All</a></p>
                     </div>
-                </template>
-        `;
+                </div>
+            </template>
+        `;*/
   },
 });

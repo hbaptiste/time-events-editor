@@ -39,27 +39,22 @@
   padding: 5px;
 }
 .events-container {
-  bordser: 1px solid red;
+  background-color: white;
 }
 .events-container .row {
   position: relative;
   outline: 1px solid gray;
   padding: 5px 0 5px 0;
   width: 500px;
-  height: 20px;
-  background: #c1d5e0;
+  min-height: 20px;
 }
-.events-container .event-item {
-  position: absolute;
-  padding-left: 5px;
-  min-height: 10px;
-  color: white;
-  display: inline-block;
-  font-family: helvetica;
-  font-size: 14px;
-}
+
 .row .event-item.entered {
   background-color: orange;
+}
+.row .event-type {
+  display: inline-block;
+  border: 1px solid orangered;
 }
 .row .row-name {
   display: inline-block;
@@ -107,4 +102,33 @@
 .list {
   border: 1px solid red
 }
+
 .btn { border: 1px solid red; margin-left:5px; padding: 5px; cursor: pointer }
+
+.event-row-wrapper {
+  display: flex;
+  position: relative;
+}
+
+.event-row-wrapper .event-title {
+  position: absolute;
+  width: 100px;
+  left: -112px;
+  top: 0px;
+  margin: 0px;
+  padding-right: 10px;
+  text-align: right;
+}
+.event-row-wrapper {
+  border: 1px solid red
+}
+.event-row-wrapper .event-item { 
+  border: 1px solid lightgray; 
+  padding: 5px;
+}
+.main-time-indicator {
+  border: 2px solid orange;
+  height: 267px;
+  position: absolute;
+  background-color: red 
+}

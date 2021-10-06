@@ -3,6 +3,7 @@ require("@babel/register");
 
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const ESLintPlugin = require('eslint-webpack-plugin');
 
 module.exports = {
   mode: "development",
@@ -12,6 +13,7 @@ module.exports = {
   },
   devtool: "inline-source-map",
   plugins: [
+    new ESLintPlugin({ fix: true, extensions: "ts"}),
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({ title: "Development", template: "src/index.html" }),
   ],
@@ -22,15 +24,18 @@ module.exports = {
         loader: "raw-loader",
       },
       {
-        test: /\.js$/,
+        test: /\.(ts|js)x?$/,
         exclude: /node_modules/,
-        use: ["babel-loader"],
+        loader: 'babel-loader',
       },
       {
         test: /\.css$/,
         use: ["style-loader", "css-loader"],
       },
     ],
+  },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js'],
   },
   output: {
     filename: "main.js",
