@@ -15,6 +15,7 @@ import "./css/style.css";
 
 /* Timeline */
 const initTimeline = function ({ tl, video, tlSize }) {
+  console.log(video.duration);
   tl.create({ duration: video.duration, repeat: true });
 
   video.addEventListener("play", (_e) => {
@@ -38,6 +39,7 @@ const initTimeline = function ({ tl, video, tlSize }) {
   /*** UI Manager ***/
   const uiManager = new UiManager();
   const rateInfos = { duration: video.duration, tlSize };
+  rateInfos.step = tlSize / (video.duration * 1000)
   const eventsRegistry = new EventsRegistry({
     timelineMng: tl,
     uiManager: uiManager,
@@ -46,8 +48,8 @@ const initTimeline = function ({ tl, video, tlSize }) {
 
   uiManager.eventsRegistry = eventsRegistry;
   /* eventRegistry */
-  //initEventsFixtures(eventsRegistry);
-  /* plugin : use events ui:events */
+  // initEventsFixtures(eventsRegistry);
+  // plugin : use events ui:events
   uiManager.use(ControlPlugin);
 };
 
@@ -61,10 +63,12 @@ const updateUi = function ({ step, duration, tlSize }) {
 
 /* start everything */
 const tl = new TimelineFactory();
-const video = document.querySelector("#mainvideo_html5_api");
 /* init Timeline */
 //setTimeout(() => {
   document.body.onload = function() {
-    initTimeline({ tl, video, tlSize: 500 });
+    const video = document.querySelector("#mainvideo_html5_api");
+    video.oncanplay = () => {
+      initTimeline({ tl, video, tlSize: 500 });
+    }
   };
 //}, 500);

@@ -6,11 +6,14 @@ CustomElement.register({
   data: {},
 
   onInit: function () {
-    this.useProvider("eventCtx"); //implementing alias
+    this.useProvider("eventCtx") //implementing alias
   },
 
   declareSideEffects: function () {
     this.registerSideEffects(this.effectLoadEvent, ["event"]); // simplifier la notation
+  /*  return [
+      { "effectLoadEvent": ["event"] }, 
+    ] */
   },
 
   createEmptyEvent: function () {

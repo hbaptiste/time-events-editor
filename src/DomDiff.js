@@ -125,9 +125,6 @@ const fnMap = {
   },
 
   REMOVE_NODE: ({ target }) => {
-    console.log("-- DOM:Diff -- REMOVE_NODE --");
-    console.log(target);
-    console.log(target.parentNode);
     target.parentNode.removeChild(target);
   },
 

@@ -2,6 +2,7 @@ import DomDataBinding from "./DomDataBinding";
 import Provider from "./Provider";
 import jss from "jss";
 import preset from "jss-preset-default";
+import { createStore } from "./Store";
 
 jss.setup(preset());
 
@@ -11,15 +12,19 @@ const _handleProps = function (component, params) {
     return false;
   }
 
-  //why props can't be null
+  // why props can't be null ?
   params.props = {};
-  properties.map((prop) => {
+  properties.map((propName) => {
     if (Array.isArray(_props_)) {
-        const propsInfos = _props_.find((current) => current.name === prop);
+        const propsInfos = _props_.find((current) => current.name === propName);
         if (propsInfos) {
         const { name, value } = propsInfos;
         params.props[name] = value;
+      } else {
+        params.props[propName] = null //init props
       }
+    } else {
+     throw "props should be an array"; 
     }
   });
   delete params._props_;
@@ -58,21 +63,23 @@ const _handleStyle = function (component, params) {
     params.__sheet__ = sheet;
   }
 };
-const _watchParents = function (component, props) {
-};
+
 
 class CustomElement {
   static elementsRegistry = new Map();
   static instanceRegistry = new Map();
 
   constructor(params) {
+    // should we use mailBox instead 
     this.mailBox = [];
     this.children = [];
     this.$injected = {};
+    this.$store = createStore("global");//wrong
     _handleProps(this, params);
     _handleStyle(this, params);
     _handleTarget(this, params);
     Object.assign(this, {}, params);
+    this.$store.register(this.onMessage.bind(this));
     this.$binding = DomDataBinding.applyMixin({ target: this, skipRoot: true });
     this.onInit();
     // _watchParents(this, params); //
@@ -81,19 +88,12 @@ class CustomElement {
     // @tofix: empêcher conflict properties/data
   }
 
-  sendMessage(message, payload) {
+  onMessage(message, payload) {
     /* check if message type exist */
     /* msg event when is complete */
     /* - . - . - . - . - */
   }
-  receiveMessage(message) {
-    switch (message.type) {
-      case NEW_EVENT:
-      case REMOVE_EVENT:
-      default:
-        break;
-    }
-  }
+
   onInit() {}
 
   onLinked() {} // @todo when the root is on the Dom
@@ -124,10 +124,9 @@ class CustomElement {
 
     if (source && Array.isArray(rest) && rest.length !== 0) {
       const value = rest.reduce((acc, pathItem) => {
-        const value = source[pathItem];
-        return value;
+        if (!acc) { return null }
+        return acc[pathItem];
       }, source);
-
       return value;
     }
 
@@ -166,8 +165,6 @@ class CustomElement {
   // Handle context
   registerSideEffects(func, deps) {
     func = func.bind(this);
-    console.log("--- d/e/ps ---");
-    console.log(deps);
     this.$binding.signals.dataChanged.connect((key) => {
       if (deps.includes(key)) {
         const values = deps.map((dep) => this.data[dep]);
@@ -181,7 +178,7 @@ class CustomElement {
       }
     });
     /* -- first call -- */
-    const dataValues = deps.map((dep) => this[dep]); //props values
+    const dataValues = deps.map((dep) => this[dep]); // ? props values
     func(...dataValues);
   }
 

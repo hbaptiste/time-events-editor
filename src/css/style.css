@@ -122,13 +122,13 @@
 .event-row-wrapper {
   border: 1px solid red
 }
-.event-row-wrapper .event-item { 
-  border: 1px solid lightgray; 
-  padding: 5px;
-}
+
 .main-time-indicator {
   border: 2px solid orange;
   height: 267px;
   position: absolute;
   background-color: red 
+}
+.event-row {
+  border: 1px solid orange
 }

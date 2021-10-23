@@ -20,14 +20,7 @@ CustomElement.register({
     cursorPosition: 0
   },
 
-  onInit: function () {
-    this.data.events = this.events;
-    let cpt = 1;
-    setInterval(() => {
-      cpt = cpt + 1; // cumul sec 
-      this.data.cursorPosition = cpt
-    }, 70);
-  },
+  onInit: function () {},
 
   declareSideEffects: function () {
     this.registerSideEffects(this.handleEvents, ["events"]); // simplifier la notation
@@ -36,23 +29,28 @@ CustomElement.register({
   onMessage({type, payload}) { 
     switch(type) {
       case "NEW_TICK":
+        const {rateInfos} = payload;
+        this.data.cursorPosition = payload.position*rateInfos.step;
     }
   },
 
   handleEvents: function(events) {
     if (!events) { return }
+    const deep = 1;
     this.data.cleanEvents = events.reduce((acc, event) => {
       const evLists = acc[event.type] || [];
       evLists.push(event)
       acc[event.type] = evLists;
       return acc;
     }, {});
+    console.log("-- clean data ---");
+    console.log(this.data.cleanEvents);
   },
   
   // when cursorPosition changes -> update style
   indicatorStyle: function(cursorPosition) {
     return {
-      left: Math.ceil(cursorPosition) + "px"
+      transform: `translate(${cursorPosition}px)`//good
     }
   },
 

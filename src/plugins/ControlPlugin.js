@@ -2,6 +2,7 @@ import CustomElement from "../CustomElement";
 import DomDataBinding from "../DomDataBinding";
 
 export default class ControlPlugin {
+  
   constructor(uiManager) {
     this.uiManager = uiManager;
     this._bindEvents();
@@ -31,7 +32,7 @@ export default class ControlPlugin {
       {
         type: "Livres",
         samples: ["Radical", "Event One"],
-        duration: ["1m", "20m"],
+        duration: ["30m", "35m"],
         data: {
           type: "text",
           content: "2/ How to deal with that.",
@@ -40,7 +41,7 @@ export default class ControlPlugin {
       {
         type: "Livres",
         samples: ["Blaze", "Nothing"],
-        duration: ["1m", "20m"],
+        duration: ["40m", "45m"],
         data: {
           type: "text",
           content: "3/ now I have two books.",
@@ -58,16 +59,25 @@ export default class ControlPlugin {
       {
         type: "auteur",
         samples: ["Radical blaze", "Indeed"],
-        duration: ["1m", "20m"],
+        duration: ["2m", "10m"],
         data: { type: "text", content: "2/ Il s'agit de Surveiller et Punir" },
       },
       {
         type: "Reference",
         samples: ["Sensible", "Temps"],
-        duration: ["1m", "20m"],
+        duration: ["5m", "15m"],
         data: {
           type: "text",
           content: "3/ Le livre de Rolph Throuillot n'a pas été traduit en Français.",
+        },
+      },
+      {
+        type: "Reference",
+        samples: ["Sensible", "Temps"],
+        duration: ["40m", "45m"],
+        data: {
+          type: "text",
+          content: "3/ Le livre de Rolph Throuillot <silencing the past> n'a pas encore été traduit en Français.",
         },
       },
     ];
@@ -101,17 +111,15 @@ export default class ControlPlugin {
           this.data.messages = [...this.data.messages, _message];
         };
         // test ticker
-        console.log("-- ui manager --");
         const { uiManager } = this.data;
-        /* you better know in tick */
+        
+        const rateInfos = uiManager.eventsRegistry.rateInfos;
         uiManager.eventsRegistry.tl.onTick((e) => {
-          console.log("-- event Registry --");
-          console.log(e);
-          //this.dispacth({type:NEW_TICK, payload:{position:e}})
-          // receive(type) 
+          const payload = {...e, rateInfos};
+          this.$store.emit({ type: "NEW_TICK", payload }) 
         });
 
-        // Provider APIs --> only provide for children
+        // @todo -> Provider API : only provide for children
         this.provide("eventCtx", {
           messages: this.data.messages,
           title: this.data.title,
@@ -154,11 +162,11 @@ export default class ControlPlugin {
         },
 
         createEvent: (event, second) => {
-          const { eventContent, eventName, eventStart, eventEnd, selectedTag } = data;
+          const { eventContent, eventName, eventStart, eventEnd, selectedTag } = this.data;
           const eventRecord = Object.assign({}, { eventContent, eventName, eventStart, eventEnd });
 
           eventRecord.rowName = selectedTag;
-          data.displayEventForm = false;
+          this.data.displayEventForm = false;
           this.uiManager.eventsRegistry.createEventFromData(eventRecord);
         },
 
@@ -179,7 +187,7 @@ export default class ControlPlugin {
                 <event-form @showIf="displayEventForm" $event="event">
                   <p>you better know</p>
                 </event-form>
-                <content-panel @showIf="displayEventsList" title="Radical blaze title!" $messages="messages" $on-select="_handleItemSelection"></content-panel>
+                <content-panel @showIf="displayEventsList" title="Radical blaze title!" $messages="messages" @onSelect="_handleItemSelection"></content-panel>
                </div>
             `;
     return eventTpl;

@@ -62,13 +62,12 @@ const isNormalAttribute = function (attr) {
 const _parseStyleValue = function(value) {
   // function / object
   const stylesPattern = {
-    REACTIVE_CALLBACK: new RegExp(/(\w+)(\((.*?)\))/, "gm") 
+    REACTIVE_CALLBACK: new RegExp(/(\w+)(\((.*?)\))?/, "gm") // soit plus précis
   }
-  const result = stylesPattern.REACTIVE_CALLBACK.exec(value);
-  if (!result) { return false }
+  const result = stylesPattern.REACTIVE_CALLBACK.exec(value);  if (!result) { return false }
   const [_, name ,__, params] = result;
   const type = params ? "callback" : "props";
-  return { name, type, params: params.split(",") }
+  return { name, type, params: params ? params.split(","): null }
 }
 
 // parse value
@@ -427,8 +426,7 @@ const renderSection = function ({ ctx, node, data }) {
           const $index = iterable.cursor;
           const currentItem = Array.isArray(item) ? item[1] : item;
           const $key = Array.isArray(item)? item[0] : $index;
-          console.log("----$key-$index----");
-          console.log($key, $index);
+          
           const nodeFunc = (function (_item_) {
             return function (i) {
               let itemCtx = node.ctx.createFrom({ [localName]: _item_ });
@@ -607,9 +605,15 @@ const compile = function (ast, domBindingCtx) {
                 const { ctx } = node;
                 tokens.map((token) => {
                   const { exp = null } = token;
-                  const value = exp ? ctx.lookup(exp) || "" : token.value;
-                  const text = document.createTextNode(value);
-                  element.appendChild(text);
+                  let value = "";
+                  if (exp) {
+                    value = ctx.lookup(exp)
+                    if (!value || value.trim().length == 0) {
+                      value = domBindingCtx.target.getValue(exp)
+                    }
+                    const text = document.createTextNode(value);
+                    element.appendChild(text); 
+                  }
                 });
                 return element;
               };

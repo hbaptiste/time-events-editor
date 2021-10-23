@@ -1,3 +1,4 @@
+/* eslint-disable no-prototype-builtins */
 export default class Context {
   /* */
   constructor(data, parent = null) {

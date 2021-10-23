@@ -101,16 +101,19 @@ export default class DomDataBinding {
     //use datacontext
     const { directives } = node;
     const target = document.createElement(node.name);
+    
     const component = CustomElement.createFromNode({
       componentName: node.name,
       target,
-      props: [{name: "eventsrow", value: ""}], // fix should work without props
+      props: [], // fix should work without props
     });
     /* populate props from context */
     const { properties } = component;
-    properties.forEach((prop) => {
-      component[prop] = dataContext.lookup(prop); // debug set value
-      dataContext.lookup(prop);
+    directives.filter( dir => dir.name == "props:watcher" ).forEach((dir) => {
+      const { targetProp=null, sourceProp=null } = dir.value;
+      if (properties.indexOf(targetProp) !== -1) {
+        component[targetProp] = dataContext.lookup(sourceProp); // debug set value
+      }
     });
     // --> register child
     this.target.children.push(component);
@@ -146,6 +149,8 @@ export default class DomDataBinding {
   _handleParts(node) {
     let type = 0;
     if (CustomElement.hasAcustomDefinition(node.tagName)) {
+      console.log("-- n/o/e --");
+      console.log(node);
       const initComponentTask = () => {
         const childComponent = this.initComponent(node.tagName, node);
         this.target.children.push(childComponent);
@@ -320,8 +325,6 @@ export default class DomDataBinding {
     }
     try {
       directive.init(ctx, directiveConfig); 
-      console.log("white")
-      console.log(directiveConfig)
     } catch (reason) {
       console.log(`Exception while applying ${name} directive !`);
       console.log(reason);
@@ -368,7 +371,8 @@ export default class DomDataBinding {
     let templateDirectives = this._handleTemplateExpressions(node);
 
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives];
-  
+    console.log("--- all directive ---");
+    console.log(allDirectives);
     allDirectives.map((directive) => {
       try {
         if (directive.name === FOREACH_DIRECTIVE) {

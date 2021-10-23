@@ -40,7 +40,6 @@ DomDataBinding.registerDirective("click", {
 
     const eventParams = params.indexOf("@event") == -1 ? ["@event", ...params] : params;
 
-
     node.addEventListener("click", (event) => {
       const ctxParams = eventParams.map((param) => {
         if (param === "@event") {
@@ -200,6 +199,8 @@ DomDataBinding.registerDirective("foreach", {
     // |--> handle value changed 
     ctx.signals.valueChanged.connect(({ key, value }) => {
       if (key !== parentName) { return false; }
+      console.log("--- value ---");
+      console.log(value, key, localName);
       createListHandler({
         ctx,
         sourceKey: key,
@@ -321,17 +322,15 @@ const getValue = (source, path) => {
 
 /* test a special kind of directive */
 DomDataBinding.registerDirective("template:value", {
-  init: function (ctx, { node, value }) {
-    const valueHandler = (key, val) => {
-      const path = value.replace("{", "").replace("}", "").split(".");
-      const [root, ...rest] = path;
+  init: function (ctx, { node, value:txtTpl }) {
+    
+    const valueHandler = (key, value) => {
+      const path = txtTpl.replace("{", "").replace("}", "").split(".");
+      const [root] = path;
       if (key === root) {
-        // Handle key with dots --> should read from context 
-        const nodeVal = val && rest.length !== 0 ? getValue(val, rest) : val;
-        node.textContent = nodeVal;
+        node.textContent = ctx.target.getValue(path.join("."));
       }
     };
-    // connect signals
     ctx.signals.dataChanged.connect(valueHandler);
     ctx.signals.propsChanged.connect(valueHandler);
   },
@@ -365,32 +364,38 @@ DomDataBinding.registerDirective("props:watcher", {
       const val = dataContext.lookup(value.sourceProp);
       setTimeout(() => {
         component[value.targetProp] = val; // we notify the change here
-      }, 5000);
+      }, 0);
      
     }
   },
 });
 
 DomDataBinding.registerDirective("style", {
-  
-  init: function(ctx, { node, value, component, dataContext }) {
-    const {type, name, params } = value;
-      // when props changes -> call functions
-      ctx.signals.valueChanged.connect(({ key, value }) => {
-        if (key.indexOf(params) !== -1) {
-          if (type !== 'callback') { return }
+  /**
+   * handle data in context
+   * handle regexp
+   * handle css as props/data
+   */
+  init: function(ctx, { node, value, component}) {
+    const { type, name, params } = value;
+      // when props change -> call functions
+      ctx.signals.valueChanged.connect(({ key }) => {
+        if (key.indexOf(params) !== -1) { return }
+          let styleObject = {};
+          if (type !== 'callback') { 
+            styleObject = component.getValue(name) || {} ;
+          } else {
             const func = component[name];
             const _params = params.map((prop) => {
               return component.getValue(prop);
             });
-            const styleObject = func.call(component, ..._params);
-            if (styleObject) {
-              Object.entries(styleObject).forEach(([k,v]) => {
-                node.style[k]= v;
-              });
-            }
-            console.log(styleObject);
-        }
+            styleObject = func.call(component, ..._params);
+          }
+          if (styleObject) {
+            Object.entries(styleObject).forEach(([k,v]) => {
+              node.style[k] = v;
+            });
+          }
       });
   }
 
