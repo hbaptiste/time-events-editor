@@ -1,11 +1,11 @@
 import CustomElement from "../../CustomElement";
-import { toMillisec } from "../../Utils";
+import { toMillisec, parseTime } from "../../Utils";
 
 CustomElement.register({    
     
     "is": "event-item",
     
-    getStyle:function() {
+    getStyle: function() {
         return {
             root: {
                 position: "relative",
@@ -16,50 +16,92 @@ CustomElement.register({
     properties: ["item"],
 
     data: {
-        itemStyle: null
+        itemStyle: null, // -- > STRANGE < --
+        selected: null,
+    },
+
+    onInit: function() {
+        this.useProvider("eventActionsCtx")// as(...) implementing alias
+        this.eventRegistered = false; 
+        this.itemDuration = null;
+        this.event = null;
+        this.styleSetted = false;
     },
 
     declareSideEffects: function () {
-        this.registerSideEffects(this.handleItemSize, ["item"]); // simplifier la notation
+        this.registerSideEffects(this.handleItemSize, ["item", "itemStyle"]); // simplifier la notation
+        this.registerSideEffects(this.handleItemSelection, ["selected"]); // simplifier la notation
     },
 
-    handleItemSize: function(item) {
-        if (!item) { return }
-        const { duration } = item;
-        const [ start, end ] = duration.map(time => toMillisec(time));
-        const STEP = 0.00013538552477210128
-        
+    handleItemSelection: function(selected) {
+
+       if (selected == null || selected == undefined) { return false }
         this.data.itemStyle = {
-            position: "absoslute",
-            left: (start * STEP) + 'px',
-            width: ((end - start) * STEP) + 'px',
-            height: '20px',
-            backgroundColor: "lightgrey",
-        }
+            ...this.data.itemStyle, 
+            backgroundColor: selected ? "orange" : "lightgrey"
+        };
     },
+
+    handleItemSize: function(item, itemStyle) {
+        
+        if (!item) { return }
+        if (itemStyle !== null) { return false }
+        const { duration } = item;
+        const event = duration.map(time => toMillisec(time));
+        const STEP = 0.00013538552477210128
+        const [ start, end ] = event;
+        // register events
+        if (this.eventRegistered == false) {
+            this.$injected.registerEvent(event);
+            this.eventRegistered = true;
+            this.event = event;
+        }
+        // item size
+        // make date itself immutable
+        this.data.itemStyle = {
+                    position: "absolute",
+                    left: (start * STEP) + 'px',
+                    width: ((end - start) * STEP) + 'px',
+                    height: '20px',
+                    backgroundColor: "lightgrey",
+                    bottom: '10px',
+                    margin: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+        }
+        this.styleSetted = true;  
+    },
+
 
     onMessage: function({type, payload}) {
         switch(type) {
-            case "NEW_TICK":
-                const { rateInfos } = payload;
-                //this.data.cursorPosition = payload.position * rateInfos.step;
-                const { duration } = this.item;
-                const parsedDuration = duration.map(time => parseTime(time));
-                this.data.itemSize = this._getItemSize(rateInfos, parsedDuration);
+            case "START_EVENT":
+                const [start] = this.event;
+                if (start === payload.position) {
+                    this.data.selected = true;
+                    this.$injected.updateContent(this.item); //publish content updated ?
+                }
                 break;
+            case "END_EVENT":
+                const [_,end] = this.event;
+                if (end === payload.position) {
+                    this.data.selected = false;
+                    // possibilité d'enlever certains message peuvent être enlevés?
+                }
         }
     },
 
     _getItemSize: function(rateInfos, parsedDuration) {
-        console.log(rateInfos,parsedDuration)
+        console.log(rateInfos, parsedDuration)
+        return 0;
     },
 
     getTemplate: function() {
         return `
             <template>
-                <p @style="itemStyle">{item.data.type} </p>
-            <template>
-            `
+                <p @style="itemStyle">{item.type} [{item.duration}]</p>
+            </template>
+        `;
     }
 
 })

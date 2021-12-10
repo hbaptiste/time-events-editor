@@ -5,10 +5,13 @@ CustomElement.register({
   is: "events-row",
   properties: ["eventsrow"],
   data: {},
+  onInit: function() {
+    console.log("-- on Init [eventsrow]--");
+  },
   getTemplate: function () {
     return `<template>
-              <div style="display: flex;">
-                <event-item km:foreach="evt in eventsrow" $item="evt" @key="strange"=></event-item>      
+              <div class="event-item-container">
+                <event-item km:foreach="evt in eventsrow" $item="evt" @key="strange"></event-item>
               </div>
             </template>`;
   },

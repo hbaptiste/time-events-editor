@@ -127,7 +127,8 @@ const _parseAttrDirective = function (attr) {
   return directive;
 };
 
-const parseDirectives = function (node, keys = []) {
+const parseDirectives = function (node=null, keys = []) {
+  if (!node) { return }
   if (!node.attributes) {
     return [];
   }
@@ -192,7 +193,7 @@ const parseTextNodeExpressions = function (textContent) {
 };
 /* parse  Template */
 const parseExpressions = function (node) {
-  const { walker } = createWalker({ root: node, filter: NodeFilter.SHOW_TEXT });
+  const { walker } = createWalker({ root: node, nodeToShow: NodeFilter.SHOW_TEXT });
   const textNodes = [],
     tokens = [];
 
@@ -278,42 +279,46 @@ const visit = function (node, { enterVisitor, exitVisitor }) {
   return node;
 };
 
+
+/* create Node */
+const createNode = function (node) {
+  const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName;
+  const isCustom = CustomElement.hasAcustomDefinition(node.nodeName) ? true : false;
+  let _node;
+  if (nodeType === "TEXT") {
+    _node = {
+      type: "element",
+      name: nodeType,
+      value: node.textContent,
+    };
+  } else {
+    _node = {
+      type: isCustom ? "custom-element": "element",
+      isCustomElement: isCustom,
+      name: nodeType,
+      children: [],
+      directives: parseDirectives(node),
+      attributes: parseAttributes(node),
+      node,
+    };
+  }
+  return _node;
+};
+
 const parseSection = function (node) {
   /** build tokens here */
-  const { walker, skip } = createWalker({ root: node });
-
-  /* create Node */
-  const createNode = function (node) {
-    const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName;
-    const isCustom = CustomElement.hasAcustomDefinition(node.nodeName) ? true : false;
-    let _node;
-    if (nodeType === "TEXT") {
-      _node = {
-        type: "element",
-        name: nodeType,
-        value: node.textContent,
-      };
-    } else if (isCustom) {
-      _node = {
-        type: "custom-element",
-        name: nodeType,
-        children: [],
-        directives: parseDirectives(node),
-        attributes: parseAttributes(node),
-        node,
-      };
-    } else {
-      _node = {
-        type: "element",
-        name: nodeType,
-        children: [],
-        directives: parseDirectives(node),
-        attributes: parseAttributes(node),
-        node,
-      };
+  const textFilter = (node) => {
+    if (node.nodeType == 3) {
+      const textContent = node.nodeValue.trim()
+      if (textContent == "") {
+        return NodeFilter.FILTER_REJECT;
+      }
     }
-    return _node;
-  };
+    return NodeFilter.FILTER_ACCEPT;
+  }
+
+  const { walker, skip } = createWalker({ root: node, filter: textFilter});
+
   /* -- find -- */
   let previousNode = null;
   let previousParent = null;
@@ -331,22 +336,12 @@ const parseSection = function (node) {
     }
   };
   walker((element) => {
-    let currentNode = createNode(element);
-    /* deal with section / directive */
-    if (isASection(currentNode)) {
-      currentNode.type = "section";
-      updateSectionInfos(currentNode);
-    }
+    let currentNode = createNode(element); 
     if (!previousParent) {
-      root = createNode(element.parentNode);
+      root = currentNode //createNode(element);
       root.isRoot = true;
-      root.directives = parseDirectives(element.parentNode);
-      root.children.push(currentNode);
+      root.directives = parseDirectives(element);
       previousParent = root;
-      if (isASection(root)) {
-        root.type = "section";
-        updateSectionInfos(root);
-      }
       saveParent(previousParent);
     } else if (element.parentNode == previousParent.node) {
       previousParent.children.push(currentNode);
@@ -362,7 +357,11 @@ const parseSection = function (node) {
         previousParent = parentNode;
       }
     }
-    /* -- check that -- */
+    /* -- maybe it's a section -- */
+    if (isASection(currentNode)) {
+      currentNode.type = "section";
+      updateSectionInfos(currentNode);
+    }
     previousNode = currentNode;
   });
   return root;
@@ -379,7 +378,7 @@ const isASection = function (node) {
 
 const updateSectionInfos = function (node) {
   const directive = node.directives.find((dir) => dir.name === "foreach");
-  node.directives = node.directives.filter((dir) => dir.name !== "foreach");
+  node.directives.filter((dir) => dir.name !== "foreach");
   const { localName, parentName } = directive.value;
   node.sectionInfos = { localName, parentName };
   return node;
@@ -387,35 +386,41 @@ const updateSectionInfos = function (node) {
 
 /* made recursive */
 const renderSection = function ({ ctx, node, data }) {
-  if (Array.isArray(data) && data.length === 0) {
+  /*if (!data || Array.isArray(data) && data.length === 0) {
     return;
-  }
+  }*/
   const rootCtx = new Context(ctx.target.getTemplateData());
-
   const ast = parseSection(node);
+  if (!ast) {
+    throw 'ParsingError'; 
+  }
+  
   /* setting contexts */
   const enterVisitor = (node, parent) => {
+    const parentCxt = parent ? parent.ctx : null
     switch (node.type) {
-      case "custon-element":
-        node.ctx = node.ctx || parent.ctx;
+      case "custom-element":
+        node.ctx = node.ctx || parentCxt;
         break;
       case "element":
-        node.ctx = node.ctx || parent.ctx;
+        node.ctx = node.ctx || parentCxt;
         break;
       case "section":
         let { localName, parentName } = node.sectionInfos;
         const [pName] = parentName.split(".");
-        const { name } = node;
+        const { name, isCustomElement } = node;
         let data = [];
         const newChildren = [];
         if (!parent) {
           data = rootCtx.lookup(parentName) || [];
           node.ctx = rootCtx.createFrom({ [localName]: data });
-        } else if (node.ctx !== null || parent.ctx) {
-          const itemCtx = node.ctx || parent.ctx;
-          data = itemCtx.lookup(parentName) || [];
+        } else {
+          let itemCtx = (node.ctx || parent.ctx) || rootCtx.createFrom({ [localName]: data });
+          data = itemCtx ? itemCtx.lookup(parentName) : []
           node.ctx = itemCtx.createFrom({ [localName]: data });
         }
+        node.directives = [...node.directives.filter(dir => dir.name !== "foreach")];
+        
         /* populate */
         // eslint-disable-next-line no-case-declarations
         let di = 0;
@@ -435,10 +440,10 @@ const renderSection = function ({ ctx, node, data }) {
                 name,
                 ctx: itemCtx,
                 key: i,
-                type: "element",
+                type: isCustomElement ? "custom-element": "element",
                 directives: [...node.directives],
                 attributes: [...node.attributes],
-                children: [],
+                //children: [],
               };
             };
           })(currentItem);
@@ -542,21 +547,28 @@ const renderTemplate = function (tplContext, data) {
 };
 
 const createWalker = function (params) {
-  const { root, filter } = params;
+  const { root, nodeToShow, rootIfEmpty=null } = params;
   const skippedList = [];
+  
   const filterFunc = (node) => {
-    if (skippedList.includes(node)) {
+    let keep = NodeFilter.FILTER_ACCEPT;
+    if (typeof params.filter === "function") {
+      keep = params.filter(node);
+    }
+    if (keep == NodeFilter.FILTER_ACCEPT && skippedList.includes(node)) {
       return NodeFilter.FILTER_REJECT;
     }
-    return NodeFilter.FILTER_ACCEPT;
+    return keep;
   };
+
   filterFunc.acceptNode = filterFunc;
-  const treeWalker = document.createTreeWalker(root, filter, filterFunc);
+  const treeWalker = document.createTreeWalker(root, nodeToShow, filterFunc);
 
   const walker = (cb) => {
-    while (treeWalker.nextNode()) {
-      const currentNode = treeWalker.currentNode;
+    let currentNode = treeWalker.currentNode
+    while (currentNode) {
       cb(currentNode, root);
+      currentNode = treeWalker.nextNode();
     }
   };
 
@@ -590,10 +602,15 @@ const compile = function (ast, domBindingCtx) {
       case "custom-element":
         const props = _propsFromDirectives(node);
         const { ctx: dataContext } = node;
-        return () => {
-          const  renderedNode = domBindingCtx.renderBlock(node, dataContext);
-          return renderedNode;
-        };
+
+        return (function(cNode, cContext) {
+          return () => {
+            const renderedNode = domBindingCtx.renderBlock(cNode, cContext);
+            return renderedNode;
+          }
+         
+        }(node, dataContext));
+      
         /** test directive */
       case "element":
         switch (node.name) {
@@ -607,9 +624,9 @@ const compile = function (ast, domBindingCtx) {
                   const { exp = null } = token;
                   let value = "";
                   if (exp) {
-                    value = ctx.lookup(exp)
-                    if (!value || value.trim().length == 0) {
-                      value = domBindingCtx.target.getValue(exp)
+                    value = domBindingCtx.target.getValue(exp)
+                    if (!value || typeof value !== "string") {
+                      value = ctx.lookup(exp) || ""
                     }
                     const text = document.createTextNode(value);
                     element.appendChild(text); 

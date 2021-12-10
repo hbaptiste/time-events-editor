@@ -93,13 +93,11 @@ DomDataBinding.registerDirective("foreach", {
     
     const createListHandler = function (params) {
       return function () {
-        const { ctx, values, sourceVariable, itemKey } = params;
-        let dataList = [],
-          target,
-          savedList = [],
-          previousSection;
+        const { ctx, values, preserveTag, sourceVariable, itemKey } = params;
+        let dataList = [], target, savedList = [], previousSection;
         dataList = ctx.target.data[parentName] || values;
-
+        console.log("<data list>");
+        console.log(dataList, parentName);
         if (!dataList) {
           return;
         }
@@ -125,14 +123,18 @@ DomDataBinding.registerDirective("foreach", {
           /** place holder */
           let placeHolder = target && target.parentNode ? target : node;
           const emptyPlaceHolder = document.createElement("template");
-
+         
+         console.log("___ dataList ___")
+          console.log(dataList);
           let domSection = renderSection({
             ctx,
             data: dataList, // values
             node,
             localName,
             parentName,
+            preserveTag
           });
+    
           const patches = DomDiff(previousSection, domSection);
           if (!patches) {
             return;
@@ -180,9 +182,9 @@ DomDataBinding.registerDirective("foreach", {
               listPlaceHolder.parentNode.removeChild(listPlaceHolder); // not needed
             }
             // if list is null
-            const savedList = listAfter.length ? listToFragment(listAfter) : null;
+            const savedList = listAfter.length ? listToFragment(listAfter) : [];
 
-            if (savedList) {
+            if (Array.isArray(savedList) > 0) {
               savedList.targetParentNode = listAfter[0].parentNode;
             }
             const data = {
@@ -199,13 +201,13 @@ DomDataBinding.registerDirective("foreach", {
     // |--> handle value changed 
     ctx.signals.valueChanged.connect(({ key, value }) => {
       if (key !== parentName) { return false; }
-      console.log("--- value ---");
-      console.log(value, key, localName);
+     
       createListHandler({
         ctx,
         sourceKey: key,
         itemKey: localName,
         values: value,
+        preserveTag: false,
       })();
     });
 
@@ -346,6 +348,7 @@ DomDataBinding.registerDirective("is", {
 // Props directive
 DomDataBinding.registerDirective("props:watcher", {
   init: function (ctx, { node, value, component, dataContext }) {
+    
     ctx.signals.dataChanged.connect((key, val) => {
       if (!component) {
         return null;
@@ -363,6 +366,7 @@ DomDataBinding.registerDirective("props:watcher", {
     if (dataContext) {
       const val = dataContext.lookup(value.sourceProp);
       setTimeout(() => {
+        // console.log("> value.targetProp >", value.targetProp);
         component[value.targetProp] = val; // we notify the change here
       }, 0);
      
@@ -379,12 +383,14 @@ DomDataBinding.registerDirective("style", {
   init: function(ctx, { node, value, component}) {
     const { type, name, params } = value;
       // when props change -> call functions
-      ctx.signals.valueChanged.connect(({ key }) => {
-        if (key.indexOf(params) !== -1) { return }
+
+      const getStyleHandler = function(directiveValue, node) {
+        
+        return function(key, val) {
           let styleObject = {};
-          if (type !== 'callback') { 
-            styleObject = component.getValue(name) || {} ;
-          } else {
+          if (directiveValue.type !== 'callback') {
+            styleObject = val || {};
+          } else if(key.indexOf(params) !=- 1) {
             const func = component[name];
             const _params = params.map((prop) => {
               return component.getValue(prop);
@@ -396,9 +402,20 @@ DomDataBinding.registerDirective("style", {
               node.style[k] = v;
             });
           }
+        }
+      }
+
+      const styleHandler = getStyleHandler(value, node);
+     ctx.signals.valueChanged.connect(({ key, value:val }) => {
+      styleHandler(key, val);
       });
   }
+});
+
+DomDataBinding.registerDirective("key", {
+  init: function(ctx, { node, value, component}) {}
 
 });
+
 
 export {};

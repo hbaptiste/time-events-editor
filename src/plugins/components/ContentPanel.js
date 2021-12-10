@@ -1,15 +1,5 @@
-import { template } from "lodash";
 import CustomElement from "../../CustomElement";
 
-const myStyle = {
-  root: {
-    border: "1px solid gray",
-    "& .main-list-wrapper": {
-      "list-style": "none",
-      "border-bottom": "1px solid light-gray",
-    },
-  },
-};
 
 const componentStyle = function (theme) {
   return {
@@ -21,7 +11,7 @@ const componentStyle = function (theme) {
         "border-bottom": "1px solid light-gray",
         padding: "5px",
       },
-      "max-height": "500px",
+      width: "500px",
       overflow: "hidden",
     },
     btn: {
@@ -42,25 +32,23 @@ const componentStyle = function (theme) {
 
 CustomElement.register({
   is: "content-panel",
-  properties: ["title", "messages"],
+  properties: ["title", "content"],
   getStyle: () => componentStyle(),
   data: {
-    title: "Haïti!",
-    messagesList: [],
+    title: "Dernier cours!",
+    contentList: [],
     init: false,
   },
   events: {
+
     onAdd: function (event) {
       const msg = this._createMessage();
-      this.data.title = "Title radical!";
-      this.data.messagesList = [...this.data.messagesList, msg]; //use a dispatcher
     },
 
     onRemove: function (event, item) {
       const previousMessage = [...this.data.messagesList];
       const index = previousMessage.indexOf(item);
       previousMessage.splice(index, 1);
-      this.data.messagesList = [...previousMessage];
     },
 
     sayHello: function () {
@@ -71,6 +59,7 @@ CustomElement.register({
       ctx.data.messagesList = [];
     },
   },
+
   _createMessage: function () {
     return {
       type: "New type",
@@ -84,11 +73,17 @@ CustomElement.register({
     return `Start at <strong>${start}</strong>end at <strong>${end}</strong>!`;
   },
 
-  onInit: function () {
-    this.data.messagesList = this.messages;
+  onInit: function () { 
+    this.useProvider("contentCtx");
+  },
+
+  handleContent: function(newContent) {
+    if (!newContent) { return }
+    this.data.contentList = [...this.data.contentList, newContent]; // ajouter $push,$remove
   },
 
   declareSideEffects: function () {
+    this.registerSideEffects(this.handleContent, ["content"]); // simplifier la notation
     this.registerSideEffects(this.loadData, ["messages", "init"]);
   },
 
@@ -96,33 +91,35 @@ CustomElement.register({
     if (init) {
       return false;
     }
+  },
 
-    setTimeout(() => {
-      this.data.init = true;
-    }, 2000);
+  onMessage: function({type, payload}) {
+    switch (type) {
+      case "NEW_CONTENT":
+        this.content = payload;
+    }
+
   },
 
   getTemplate: function (classes) {
-    return `<template></template>;`;
-    /*return `<template>
+    return `<template>
               <div class='${classes.root}'>
-                    <ul class="main-list-wrapper">
-                        <li class="${classes.list}" @click="onRemove($event, item)" km:foreach="item in messagesList">
-                            <p class="${classes.paragraph}">
-                                mon titre->{title}
-                            </p>
-                            <p>duration { item.duration | handleDuration }</p>
-                            <p><em>Type : {item.type}</em>!</pw x>
-                            <p>content: {item.data.content}!</p> 
-                            <span>{item.data.content}</span>
-                        </li>
-                    </ul>
-                    <div class="${classes.btn}">
-                        <p class='btn'><a @click="onAdd">Add</a></p>
-                        <p class='btn'><a @click="onClear">Clear All</a></p>
-                    </div>
+                <ul class="main-list-wrapper">
+                    <li class="${classes.list}" @click="onRemove($event, t)" km:foreach="t in contentList">
+                        <p class="${classes.paragraph}">
+                            mon titre->{title}
+                        </p>
+                        <p>duration { t.duration | handleDuration }</p>
+                        <p><em>Type : {t.type}</em>!</p>
+                        <span>{t.data.content}</span>
+                    </li>
+                </ul>
+                <div class="${classes.btn}">
+                    <p class='btn'><a @click="onAdd">Add</a></p>
+                    <p class='btn'><a @click="onClear">Clear All</a></p>
                 </div>
+              </div>
             </template>
-        `;*/
+        `;
   },
 });

@@ -18,7 +18,7 @@ class DirectiveRegistry {
     const { name } = data;
     const directive = this.directivesMap.get(name) || null;
     if (!directive || typeof directive.init != "function") {
-      throw "Directive not Found!";
+      throw `Directive ${name} not Found!`;
     }
     try {
       directive.init(ctx, data);

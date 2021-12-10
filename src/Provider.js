@@ -20,9 +20,10 @@ class Provider {
 
     Object.keys(rest).map((injectedKey) => {
       if (typeof rest[injectedKey] !== "function") {
+        // from source [provider] to target
         source.$binding.signals.dataChanged.connect((key, value) => {
           if (injectedKey === key) {
-            target.data[injectedKey] = value;
+            target.data[injectedKey] = value; //strange
           }
         });
         const oldValue = source.data[injectedKey]; 

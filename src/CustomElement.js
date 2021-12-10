@@ -3,6 +3,7 @@ import Provider from "./Provider";
 import jss from "jss";
 import preset from "jss-preset-default";
 import { createStore } from "./Store";
+import cloneDeep from "clone-deep";
 
 jss.setup(preset());
 
@@ -38,16 +39,19 @@ const _handleTarget = function (component, params) {
   }
   const wrapper = document.createElement("div");
   const { classes = null } = params.__sheet__;
-  wrapper.innerHTML = params.getTemplate(classes).trim();
+  wrapper.innerHTML = params.getTemplate(classes).trim().replace(/^(&nbsp;|\s)*/, '');
   const template = wrapper.firstChild;
   if (template.tagName !== "TEMPLATE") {
     throw new Error(`TemplateTagMissing for ${params.is}!`);
   }
   /* deal with slot --> target content */
-  target.innerHTML = "";
-  const templateContent = template.content.cloneNode(true);
-  target.appendChild(templateContent);
-  params.root = target;
+  wrapper.innerHTML = template.innerHTML.trim();
+  if (!wrapper.firstChild) {
+    throw new Error(`Template is empty for component ${params.is}!`);
+  }
+  const templateContent = wrapper.firstChild.cloneNode(true);
+  target.appendChild(templateContent); // deal with component style and props
+  params.root = templateContent;
 };
 
 const _handleStyle = function (component, params) {
@@ -74,16 +78,16 @@ class CustomElement {
     this.mailBox = [];
     this.children = [];
     this.$injected = {};
-    this.$store = createStore("global");//wrong
+    this.$store = createStore("global"); // wrong inject as a params
     _handleProps(this, params);
     _handleStyle(this, params);
     _handleTarget(this, params);
     Object.assign(this, {}, params);
+
     this.$store.register(this.onMessage.bind(this));
     this.$binding = DomDataBinding.applyMixin({ target: this, skipRoot: true });
-    this.onInit();
-    // _watchParents(this, params); //
     this.declareSideEffects();
+    this.onInit();
     this.$binding.flush(); // call OnOnit on children
     // @tofix: empêcher conflict properties/data
   }
@@ -120,8 +124,7 @@ class CustomElement {
 
   getValue(path) {
     const [root, ...rest] = path.split(".");
-    const source = this[root] || this.data[root]; // -> root > data
-
+    const source = this[root] || this.data[root]; // -> root > data   
     if (source && Array.isArray(rest) && rest.length !== 0) {
       const value = rest.reduce((acc, pathItem) => {
         if (!acc) { return null }
@@ -129,7 +132,6 @@ class CustomElement {
       }, source);
       return value;
     }
-
     return source;
   }
 
@@ -164,21 +166,19 @@ class CustomElement {
   }
   // Handle context
   registerSideEffects(func, deps) {
+    
+    if (typeof func !== "function") {
+      throw `${func} must be a function!`;
+    }
     func = func.bind(this);
-    this.$binding.signals.dataChanged.connect((key) => {
+    // use getTemplate Data;
+    this.$binding.signals.valueChanged.connect(({_, key}) => {
       if (deps.includes(key)) {
-        const values = deps.map((dep) => this.data[dep]);
+        var values = deps.map((dep) => this.getValue(dep));
         func(...values);
       }
     });
-    this.$binding.signals.propsChanged.connect((key) => {
-      if (deps.includes(key)) {
-        const values = deps.map((dep) => this[dep]); //?
-        func(...values);
-      }
-    });
-    /* -- first call -- */
-    const dataValues = deps.map((dep) => this[dep]); // ? props values
+    var dataValues = deps.map((dep) => this.getValue(dep));
     func(...dataValues);
   }
 
@@ -192,8 +192,11 @@ class CustomElement {
     if (!componentConf) {
       return;
     }
-    const conf = { ...componentConf, target, _props_: props };
-    return new CustomElement(Object.assign({}, conf));
+    const cloneConf = cloneDeep(componentConf); 
+    const conf = { ...cloneConf, target, _props_: props };
+    console.log(`creating a [${componentConf.is}] node!`);
+
+    return new CustomElement(conf);
   }
 
   static createFromDirective(name, { ctx, node }) {
@@ -201,6 +204,8 @@ class CustomElement {
     if (!componentConf) {
       throw `Component ${name} not found!`;
     }
+    console.log("inside createFromDirective");
+
     /* config -> root, parent */
     componentConf.root = node;
     componentConf.parentContext = ctx; // deal with parent livecycle
@@ -221,6 +226,14 @@ class CustomElement {
       return null;
     }
     return CustomElement.elementsRegistry.get(name.toLowerCase());
+  }
+
+  static render(name, target) {
+    return CustomElement.createFromNode({
+      componentName: name,
+      props: [], // fix should work without props
+      target
+    });
   }
 }
 

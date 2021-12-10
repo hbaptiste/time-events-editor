@@ -29,22 +29,19 @@ CustomElement.register({
   onMessage({type, payload}) { 
     switch(type) {
       case "NEW_TICK":
-        const {rateInfos} = payload;
-        this.data.cursorPosition = payload.position*rateInfos.step;
+        const { rateInfos } = payload;
+        this.data.cursorPosition = payload.position * rateInfos.step;
     }
   },
 
   handleEvents: function(events) {
     if (!events) { return }
-    const deep = 1;
     this.data.cleanEvents = events.reduce((acc, event) => {
       const evLists = acc[event.type] || [];
       evLists.push(event)
       acc[event.type] = evLists;
       return acc;
     }, {});
-    console.log("-- clean data ---");
-    console.log(this.data.cleanEvents);
   },
   
   // when cursorPosition changes -> update style
@@ -62,7 +59,7 @@ CustomElement.register({
                   <div class="component events-container">
                       <div km:foreach="event in cleanEvents" class="event-row-wrapper">
                         <p class="row event-title">{$key}</p>
-                        <events-row $eventsrow="event" class="event-row"></event-row>
+                        <events-row $eventsrow="event" class="event-row"></events-row>
                       </div>
                   </div>
               </div>

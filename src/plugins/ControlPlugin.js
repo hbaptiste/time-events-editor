@@ -22,11 +22,18 @@ export default class ControlPlugin {
     const messages = [
       {
         type: "Livres",
-        samples: ["Radical", "Event One"],
-        duration: ["1m", "20m"],
+        duration: ["2s", "4s"],
         data: {
           type: "text",
           content: "1/ Le livre de Rolph Throuillot n'a pas été traduit en Français.",
+        },
+      },
+      {
+        type: "Livres",
+        duration: ["20s", "50s"],
+        data: {
+          type: "text",
+          content: "Différence structure.",
         },
       },
       {
@@ -41,7 +48,7 @@ export default class ControlPlugin {
       {
         type: "Livres",
         samples: ["Blaze", "Nothing"],
-        duration: ["40m", "45m"],
+        duration: ["6s", "2m"],
         data: {
           type: "text",
           content: "3/ now I have two books.",
@@ -50,7 +57,7 @@ export default class ControlPlugin {
       {
         type: "Livres",
         samples: ["Blaze", "Nothing"],
-        duration: ["1m", "20m"],
+        duration: ["4m", "10m"],
         data: {
           type: "text",
           content: "4/ now I have Seven books.",
@@ -86,9 +93,11 @@ export default class ControlPlugin {
       data: {
         displayEventForm: false,
         displayRowForm: false,
-        displayEventsList: true,
+        displayEventsList: false,
+        displayContentViewer: true,
         rowTags: ["Author", "Harris", "radical"],
         messages: [...messages],
+        content: null,
         title: "Blaze again title !",
         event: null,
         uiManager
@@ -99,17 +108,20 @@ export default class ControlPlugin {
       },
 
       onInit: function () {
-        const messageUpdater = (message) => {
-          const _message = {
-            type: "Citation",
-            duration: [message.start, message.end],
-            data: {
-              type: "text",
-              content: message.detail,
-            },
-          };
-          this.data.messages = [...this.data.messages, _message];
+        const contentUpdater = (lastContent) => {
+        this.data.content = lastContent;
+        this.$store.emit({type: "NEW_CONTENT", payload: lastContent});
         };
+
+        const registerEvent = (event) => {
+          const [start, end] = event;
+          uiManager.eventsRegistry.tl.onTick((event) => {
+            this.$store.emit({ type: "START_EVENT", payload: event }) 
+          }, start);
+          uiManager.eventsRegistry.tl.onTick((event) => {
+            this.$store.emit({ type: "END_EVENT", payload: event }) 
+          }, end);
+        }
         // test ticker
         const { uiManager } = this.data;
         
@@ -121,13 +133,18 @@ export default class ControlPlugin {
 
         // @todo -> Provider API : only provide for children
         this.provide("eventCtx", {
-          messages: this.data.messages,
+          messages: this.data.messages, //allow (func)
           title: this.data.title,
-          updateMessage: messageUpdater,
+          registerEvent: registerEvent,
           closeForm: () => {
             this.data.displayEventForm = false;
           },
         });
+
+        this.provide("eventActionsCtx", {
+          registerEvent: registerEvent,
+          updateContent: contentUpdater
+        })
       },
 
       _createEmptyEvent: function () {
@@ -184,10 +201,9 @@ export default class ControlPlugin {
               <div class="root">
                 <button class="newEventBtn" @click="showEventForm">[+]Create Event</button>
                 <events-viewer $events="messages"></events-viewer>
-                <event-form @showIf="displayEventForm" $event="event">
-                  <p>you better know</p>
+                <event-form style="display:none" @showIf="displayEventForm" $event="event">
+                  <p>you better know strange</p>
                 </event-form>
-                <content-panel @showIf="displayEventsList" title="Radical blaze title!" $messages="messages" @onSelect="_handleItemSelection"></content-panel>
                </div>
             `;
     return eventTpl;

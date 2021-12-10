@@ -65,7 +65,7 @@ export default class TimelineFactory {
         const previousState = { ...this.state };
         this.state.position = previousState.position + 1;
         
-        this._handleEvents({ ...this.state });
+        this._handleEvents({ ...this.state});
         
         if (this.state.position === duration) {
           if (!this.repeat) {
@@ -85,7 +85,9 @@ export default class TimelineFactory {
     if (Array.isArray(cbList)) {
       cbList.map((cb) => {
         try {
-          cb({ position: this.state.step });
+          setTimeout(() => {
+            cb({ position: this.state.step });
+          },0);
         } catch(e) {
           console.log("-- error --");
           console.log(e);
@@ -99,11 +101,13 @@ export default class TimelineFactory {
     this.state = { ...this.state, position: 0, stop: 0}
   }
 
-  _handleEvents({ position: currentPosition }) {
+  _handleEvents({ step: currentPosition }) {
     /*  we notify everyone */
     Object.entries(this.callbacksRegistry).map(([position, cbList]) => {
       if (position === "*" || `position_${currentPosition}` === position) {
-        this._executeAll(cbList, currentPosition);
+        setTimeout(() => {
+          this._executeAll(cbList, currentPosition);
+        },0);
       }
     });
   }

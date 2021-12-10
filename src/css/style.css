@@ -11,11 +11,18 @@
   background: yellow;
 }
 
+body {
+  _max-width: max-content;
+  _margin: auto;
+}
+
 .main-wrapper {
   padding: 5px;
-  width: 500px;
-  margin: auto;
-  background: #263238;
+  width: auto;/*500px;*/
+  display: flex;
+  justify-content: space-evenly;
+  border: 1px solid blue;
+  height: auto;
 }
 .component {
   margin-bottom: 3px;
@@ -42,10 +49,9 @@
   background-color: white;
 }
 .events-container .row {
-  position: relative;
+  position: absolute;
   outline: 1px solid gray;
   padding: 5px 0 5px 0;
-  width: 500px;
   min-height: 20px;
 }
 
@@ -106,29 +112,35 @@
 .btn { border: 1px solid red; margin-left:5px; padding: 5px; cursor: pointer }
 
 .event-row-wrapper {
-  display: flex;
   position: relative;
 }
 
 .event-row-wrapper .event-title {
-  position: absolute;
-  width: 100px;
-  left: -112px;
-  top: 0px;
-  margin: 0px;
-  padding-right: 10px;
+  float: left;
+  width: 13%;
+  left: -70px;
+  top: -15px;
   text-align: right;
-}
-.event-row-wrapper {
-  border: 1px solid red
 }
 
 .main-time-indicator {
-  border: 2px solid orange;
+  border: 1px solid orange;
   height: 267px;
   position: absolute;
   background-color: red 
 }
 .event-row {
-  border: 1px solid orange
+  display: block;
+  background-color: orange;
+}
+.event-item-container {
+  position: relative;
+  border: 1px solid salmon;
+  width: 500px;
+  height: 50px;
+}
+.event-item-container p {
+  vertical-align: middle;
+  border: 1px solid black;
+  margin: auto;
 }

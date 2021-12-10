@@ -2,7 +2,7 @@ class Store {
     
     name: string;
     settings: unknown;
-    listeners: Array<(action: unknown) =>void>;
+    listeners: Array<(action: unknown) => void>;
 
     constructor(name: string, settings: unknown) {
         this.name = name;

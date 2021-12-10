@@ -52,41 +52,31 @@ export default class EventsRegistry {
     return result;
   }
 
-  add(event) {
-    let { start, end, duration } = event;
-    if (!start) {
-      throw new Exception("Wrong EventFormat: start must be provided!");
-    }
-    if (!end && !duration) {
-      throw new Exception("Wrong EventFormat! s");
+  add(event,callback) {
+    
+    let [start, end] = event;
+    
+    if (!start || !end) {
+      throw "Missing Parameters: start time, end time must be provided!";
     }
 
-    if (end) {
-      duration = end - start;
-    }
-    this.tl.onTick(this._onStart.bind(this, event), 59);
+    console.log("start-->", start);
+    console.log("end --->", end);
+    this.tl.onTick(this._onStart.bind(this, event), start);
     this.tl.onTick(this._onEnd.bind(this, event), end);
-    const RATE = 500 / this.rateInfos.duration;
-    /* notify ui manager -> display */
-    event.left = Math.floor(start * RATE);
-    event.width = Math.floor(duration * RATE);
-
-    /* new row */
+   
     this.uiManager.send({ type: "NEW_EVENT", event });
     this.eventsList.push(event);
   }
   
   _onStart(event) {
-    /* notify ui manager -> highlight */
-    this.uiManager.send({ type: "START_EVENT", event });
-    console.log("... startEvent ...")
+    /* notify store */
+    this.uiManager.dispatch({ type: "START_EVENT", event });
+    alert("--- on start ---");
   }
   _onEnd(event) {
     /* notify ui manager */
     this.uiManager.dispatch({ type: "END_EVENT", event });
+    alert("--- on stop ---");
   }
-
-  edit(Event) {}
-
-  remove(event) {}
 }

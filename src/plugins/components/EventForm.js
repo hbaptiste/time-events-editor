@@ -6,7 +6,7 @@ CustomElement.register({
   data: {},
 
   onInit: function () {
-    this.useProvider("eventCtx") //implementing alias
+    this.useProvider("eventCtx") // implementing alias
   },
 
   declareSideEffects: function () {
