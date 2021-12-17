@@ -26,7 +26,7 @@ DomDataBinding.registerDirective("event", {
     if (typeof callback !== "function") {
       throw `@event:${eventName} -> callback must be a function!`;
     }
-    node.addEventListener(eventName, callback.bind(ctx, ctx.target.data));
+    node.addEventListener(eventName, callback.bind(ctx.target));
   },
 });
 
@@ -124,7 +124,7 @@ DomDataBinding.registerDirective("foreach", {
           let placeHolder = target && target.parentNode ? target : node;
           const emptyPlaceHolder = document.createElement("template");
          
-         console.log("___ dataList ___")
+          console.log("___ dataList ___")
           console.log(dataList);
           let domSection = renderSection({
             ctx,
@@ -241,6 +241,16 @@ DomDataBinding.registerDirective("model", {
       case "SELECT":
         break;
       case "INPUT":
+  
+        node.addEventListener(
+            "input",
+            (function (key) {
+              return function (event) {
+                ctx.target.setValue(key, event.target["value"]); //
+              };
+            })(key)
+          );
+        break;
       default:
         const handleValue = (dataKey, dataValue) => {
           const [root] = key.split(".");
@@ -261,7 +271,7 @@ DomDataBinding.registerDirective("model", {
         ctx.signals.dataChanged.connect(handleValue);
         ctx.signals.propsChanged.connect(handleValue);
     }
-    /*if (nodeType === "SELECT") {
+    if (nodeType === "SELECT") {
       ctx.signals.dataChanged.connect((dataKey, keyValue) => {
         if (dataKey !== key) return false;
         const computation = function () {
@@ -278,21 +288,7 @@ DomDataBinding.registerDirective("model", {
       node.addEventListener("change", (e) => {
         ctx.target.data[key] = e.target.value;
       });
-    } else {
-      node.addEventListener(
-        "input",
-        (function (key) {
-          return function (e) {
-            const isEditable = e.target.isContentEditable;
-            const valueKey =
-              isEditable & (e.target.tagName !== "TEXTAREA")
-                ? "innerHTML"
-                : "value";
-            ctx.target.data[key] = e.target[valueKey];
-          };
-        })(key)
-      );
-    } */
+    }
   },
 });
 

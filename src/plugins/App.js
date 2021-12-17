@@ -3,6 +3,7 @@ import TimelineFactory from "../TimelineFactory";
 import UiManager from "../UiManager";
 import ControlPlugin from "./ControlPlugin";
 import EventsRegistry from "../EventsRegistry"
+import { messages } from "../fixtures";
 
 CustomElement.register({
   is: "root-app",
@@ -14,6 +15,8 @@ CustomElement.register({
   onInit: function() {
     const tl = new TimelineFactory();
     const initTimeline = this.initTimeline.bind(this);
+
+    /* testing fixtures */
     document.body.onload = function() {
       const video = document.querySelector("#mainvideo_html5_api")
       video.oncanplay = () => initTimeline({ tl, video, tlSize: 500 })
@@ -32,13 +35,20 @@ initTimeline: function ({ tl, video, tlSize }) {
       tl.goto(video.currentTime * 1000); //currentTime is in sec
     });
     /*** UI Manager ***/
-    const rateInfos = { duration: video.duration, tlSize };
-  const eventsRegistry = new EventsRegistry({
-    timelineMng: tl,
-    uiManager: uiManager,
-    rateInfos,
-  });
-
+    const rateInfos = { duration: video.duration, tlSize }
+    const initState = {
+      rateInfos,
+      messages,
+      currentEvent: null  
+    };
+  
+    const eventsRegistry = new EventsRegistry({
+      timelineMng: tl,
+      uiManager: uiManager,
+      rateInfos,
+    });
+    
+    this.$store.init({...initState})
   /* UI Manager */
     const uiManager = new UiManager();
     uiManager.eventsRegistry = eventsRegistry;

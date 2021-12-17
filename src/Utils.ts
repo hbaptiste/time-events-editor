@@ -1,3 +1,5 @@
+import { noop } from "@babel/types";
+
 interface Iterable {
     hasNext(): boolean,
     next(): unknown,
@@ -13,11 +15,49 @@ interface KVMap {
 // types declaration
 type IteratorSource = KVMap | Array<unknown>;
 
-type ParsedTime = { 
-    h: number; 
-    min: number; 
-    sec: number
-};
+
+interface Params {
+  h: number;
+  min: number;
+  sec: number;
+}
+
+class ParsedTime {
+  h: number;
+  min: number;
+  sec: number;
+
+  constructor (params: Params) {
+    this.h = params.h;
+    this.min = params.min;
+    this.sec = params.sec;
+    console.log("-- params --");
+    console.log(params);
+  }
+
+  toMilisec():number {
+    return ((this.h * 60 * 60) + (this.min * 60) + this.sec) * 1000;
+  }
+
+  format(format: string): string {
+
+   switch(format) {
+     case "miliseconde":
+       break;
+     case "dotted":
+       return `${this.h}:${this.min}:${this.sec}`;
+     case "duration":
+       const h = this.h != 0 ?`${this.h}h`: ""
+       const min = this.min != 0 ?`${this.min}mn`: ""
+       const sec = this.sec != 0 ?`${this.sec}s`: ""
+      return `${h}${min}${sec}`;
+     default:
+        return "";
+   }
+  }
+
+}
+
 
 class Iterator implements Iterable {
     cursor: number;
@@ -59,7 +99,7 @@ const createIterator = function(source: KVMap | Array<unknown>): Iterable {
 }
 
 const parseTime = function(time:string): ParsedTime | null {
-    let result:ParsedTime;
+    let result: ParsedTime;
     const sec = { type: "sec", pattern: /^(\d{1,2})s$/ }; // 10s
     const min = { type: "mn", pattern: /^(\d{1,2})m(\d{1,2}s?)?/ }; // 1(h(10m(.11s
     const hour = { type: "hr", pattern: /^\d{1,2}h(\d{1,2}m(\d{1,2})s?)?/ }; // <revd>
@@ -73,13 +113,13 @@ const parseTime = function(time:string): ParsedTime | null {
         m3 = parseInt(m3) || 0; // reset to 0
         switch (type) {
           case "sec":
-            result = { sec: m1, min: 0, h: 0 };
+            result = new ParsedTime({ sec: m1, min: 0, h: 0 });
             break;
           case "mn":
-            result = { h: 0, min: m1, sec: m2 };
+            result = new ParsedTime({ h: 0, min: m1, sec: m2 });
             break;
           case "hour":
-            result = { h: m1, min: m2, sec: m3 };
+            result = new ParsedTime({ h: m1, min: m2, sec: m3 });
             break;
         }
         break;
@@ -98,4 +138,10 @@ const parseTime = function(time:string): ParsedTime | null {
     return result;
   } 
 
-export { createIterator, parseTime, toMillisec };
+  const timeToDuration = function(time:string): string {
+    const timepart:Array<string> = time.split(":");
+    const [h, min, sec] = timepart;
+    return new ParsedTime({h: parseInt(h), min: parseInt(min), sec: parseInt(sec)}).format("duration");
+  }
+
+export { createIterator, parseTime, toMillisec, timeToDuration };

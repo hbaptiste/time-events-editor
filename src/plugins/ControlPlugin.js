@@ -1,93 +1,23 @@
 import CustomElement from "../CustomElement";
 import DomDataBinding from "../DomDataBinding";
+import { timeToDuration } from "../Utils"
 
 export default class ControlPlugin {
   
   constructor(uiManager) {
     this.uiManager = uiManager;
-    this._bindEvents();
   }
-
-  _bindEvents() {
+  
+  init() {
     const cb = this._createControllers();
     this.uiManager.signals.init.connect(cb);
   }
-
-  init() {}
 
   _createControllers(ctx) {
     const ctlContainer = document.querySelector(".controls-wrapper");
     ctlContainer.innerHTML = this.getTemplate();
     const uiManager = this.uiManager;
-    const messages = [
-      {
-        type: "Livres",
-        duration: ["2s", "4s"],
-        data: {
-          type: "text",
-          content: "1/ Le livre de Rolph Throuillot n'a pas été traduit en Français.",
-        },
-      },
-      {
-        type: "Livres",
-        duration: ["20s", "50s"],
-        data: {
-          type: "text",
-          content: "Différence structure.",
-        },
-      },
-      {
-        type: "Livres",
-        samples: ["Radical", "Event One"],
-        duration: ["30m", "35m"],
-        data: {
-          type: "text",
-          content: "2/ How to deal with that.",
-        },
-      },
-      {
-        type: "Livres",
-        samples: ["Blaze", "Nothing"],
-        duration: ["6s", "2m"],
-        data: {
-          type: "text",
-          content: "3/ now I have two books.",
-        },
-      },
-      {
-        type: "Livres",
-        samples: ["Blaze", "Nothing"],
-        duration: ["4m", "10m"],
-        data: {
-          type: "text",
-          content: "4/ now I have Seven books.",
-        },
-      },
-      {
-        type: "auteur",
-        samples: ["Radical blaze", "Indeed"],
-        duration: ["2m", "10m"],
-        data: { type: "text", content: "2/ Il s'agit de Surveiller et Punir" },
-      },
-      {
-        type: "Reference",
-        samples: ["Sensible", "Temps"],
-        duration: ["5m", "15m"],
-        data: {
-          type: "text",
-          content: "3/ Le livre de Rolph Throuillot n'a pas été traduit en Français.",
-        },
-      },
-      {
-        type: "Reference",
-        samples: ["Sensible", "Temps"],
-        duration: ["40m", "45m"],
-        data: {
-          type: "text",
-          content: "3/ Le livre de Rolph Throuillot <silencing the past> n'a pas encore été traduit en Français.",
-        },
-      },
-    ];
+   
     CustomElement.create({
       root: ctlContainer,
       data: {
@@ -96,7 +26,7 @@ export default class ControlPlugin {
         displayEventsList: false,
         displayContentViewer: true,
         rowTags: ["Author", "Harris", "radical"],
-        messages: [...messages],
+        messages: [],
         content: null,
         title: "Blaze again title !",
         event: null,
@@ -109,8 +39,9 @@ export default class ControlPlugin {
 
       onInit: function () {
         const contentUpdater = (lastContent) => {
-        this.data.content = lastContent;
-        this.$store.emit({type: "NEW_CONTENT", payload: lastContent});
+          this.data.content = lastContent;
+          // messages from --> deal with update after
+          this.$store.emit({type: "", payload: lastContent});
         };
 
         const registerEvent = (event) => {
@@ -123,12 +54,14 @@ export default class ControlPlugin {
           }, end);
         }
         // test ticker
-        const { uiManager } = this.data;
-        
-        const rateInfos = uiManager.eventsRegistry.rateInfos;
+        const { uiManager } = this.data;        
+        const { messages, rateInfos } = this.$store.getState()
+        // set the messages
+        this.data.messages = messages;
+
         uiManager.eventsRegistry.tl.onTick((e) => {
           const payload = {...e, rateInfos};
-          this.$store.emit({ type: "NEW_TICK", payload }) 
+          this.$store.emit({ type: "NEW_TICK", payload })
         });
 
         // @todo -> Provider API : only provide for children
@@ -139,12 +72,33 @@ export default class ControlPlugin {
           closeForm: () => {
             this.data.displayEventForm = false;
           },
+          addNewEvent: (event) => {
+            // clean message
+            const {start, end} = event;
+            event.duration = [timeToDuration(start), timeToDuration(end)]
+            // console log indeed
+            this.$store.emit({type: "NEW_CREATED_EVENT", payload: event})
+          }
         });
 
         this.provide("eventActionsCtx", {
           registerEvent: registerEvent,
           updateContent: contentUpdater
         })
+      },
+
+      //use selector => return a new function with selector?
+      onMessage: function({state, type, payload, $commit}) {
+        if (type !== "NEW_CREATED_EVENT") { return }
+        alert("--alert--")
+        console.log("-- on message --");
+        console.log("-- radical blaze --");
+        console.log("-- type --")
+        console.log(type, state);
+        console.log(payload);
+        const {messages=[]} = state;
+        messages.push(payload)
+        $commit({ ...state, messages});
       },
 
       _createEmptyEvent: function () {
@@ -154,6 +108,7 @@ export default class ControlPlugin {
           end: "20mn",
           tags: ["livre", "idées"],
           detail: "En dehors de tout ! How they did it !",
+          type: "authors"
         };
       },
 
@@ -176,6 +131,8 @@ export default class ControlPlugin {
         showEventForm: function () {
           this.data.displayEventForm = true;
           this.data.event = this._createEmptyEvent();
+          console.log("-- nature --");
+          console.log(this.data.event);
         },
 
         createEvent: (event, second) => {
@@ -200,10 +157,8 @@ export default class ControlPlugin {
     const eventTpl = `
               <div class="root">
                 <button class="newEventBtn" @click="showEventForm">[+]Create Event</button>
-                <events-viewer $events="messages"></events-viewer>
-                <event-form style="display:none" @showIf="displayEventForm" $event="event">
-                  <p>you better know strange</p>
-                </event-form>
+                <events-viewer @showIf="!displayEventForm" $events="messages"></events-viewer>
+                <event-form style="display:none" @showIf="displayEventForm" $event="event"></event-form>
                </div>
             `;
     return eventTpl;

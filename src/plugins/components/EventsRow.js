@@ -3,11 +3,15 @@ import EventItem from "./EventItem";
 
 CustomElement.register({
   is: "events-row",
+  
   properties: ["eventsrow"],
+  
   data: {},
+  
   onInit: function() {
     console.log("-- on Init [eventsrow]--");
   },
+
   getTemplate: function () {
     return `<template>
               <div class="event-item-container">

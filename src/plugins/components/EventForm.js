@@ -3,10 +3,18 @@ import CustomElement from "../../CustomElement";
 CustomElement.register({
   is: "event-form",
   properties: ["event"],
-  data: {},
+  data: {
+    startPosition: 1
+  },
 
   onInit: function () {
     this.useProvider("eventCtx") // implementing alias
+    console.log(this.$store.getState())
+  },
+
+  onStoreUpdated: function(key, value) {
+    console.log("/* value */", key);
+    console.log(value);
   },
 
   declareSideEffects: function () {
@@ -30,53 +38,45 @@ CustomElement.register({
   
   events: {
     createEvent: function () {
-      this.$injected.updateMessage(this.event);
+
+      //console.log(this.event);
+      //this.$injected.upda
+      //this.$store.emit({type: "REGISTER_NEW_EVENT", payload: this.event})
+      this.$injected.addNewEvent(this.event);
       this.$injected.closeForm();
     },
 
     close: function () {
       this.$injected.closeForm(); // injected
     },
+
+    _handleStartChange: function(event) {
+      this.data.startPosition = event.target.value;
+    },
+
+    _handleEndChange: function(event) {
+      this.data.end
+    }
   },
 
   getTemplate: function () {
     return `<template>
                 <div class="event-form-control" style="border: 1px solid red">
-                  <span class="clsBtn" @click="close">X</span>
-                  <div>
-                    <p>infos: {event.start}, {event.end} {event.name}!</p>
-                    <div> My content: {event.detail}</div>              
-                  </div>
-                 <span>Tag</span>
-                  <div @showIf="!displayRowForm">
-                    <select @model="selectedTag">
-                      <option km:foreach="item in rowTags" renderer="_handleOption">
-                        Patrov {item} options!
-                      </option>
-                    </select>
-                    <span class="addRowCls" @click="showRowForm">[+]</span>
-                  </div>
-                 <div  @showIf="displayRowForm">
-                  <span km:model="newRowName" style="display: inline-block; width: 100px; border: 1px solid gray" class="" contenteditable></span>
-                  <span class="addRowCls" @click="createNewRow">[+]</span>
-                 </div>
-
+                    <span class="clsBtn" @click="close">X</span>
                   <div class="fixed">
-                    <p> 
-                      <span>Create a new event started :</span>
-                      <span @model="event.name" class="editable-content" contenteditable="true">Event Name</span> 
-                        started at
-                        <div style="border: 1px solid red">
-                          <p>{event.name}</p>
-                          <p>{event.name}</p>
-                          <p>{event.detail}</p>
-                        </div>
-                      <span @model="event.start" class="editable-content" contenteditable="true">1.23</span>
-                        end at
-                      <span @model="event.end" class="editable-content" contenteditable="true">2.3</span>.
-                    </p>
+                    <label class="field-label">
+                      Event name
+                      <input @model="event.name" class="event-name" /> 
+                    </label>
+                    <label class="field-label steps">
+                      Start at: <input @model="event.start" type="time" value="00:00:00" step="1" class="slider">
+                    </label>
+                    <label class="field-label steps">
+                     / End at <input @model="event.end" type="time" value="00:00:00" step="1" "class="slider">
+                    </label>
                     <div>
-                      <textarea @model="event.detail">This is my content...</textarea>
+                      <textarea class="event-content" @model="event.detail">This is my content...</textarea>
+                      <p><span>tag</span>: Harris, baptiste, strange</p>
                     </div>
                   </div>
                   <p><button @click="createEvent" id="createBtn">Créer</button></p>

@@ -83,12 +83,14 @@ class CustomElement {
     _handleStyle(this, params);
     _handleTarget(this, params);
     Object.assign(this, {}, params);
-
+    // handle store variable
+    this.$store.on(this.onStoreUpdated.bind(this));
     this.$store.register(this.onMessage.bind(this));
     this.$binding = DomDataBinding.applyMixin({ target: this, skipRoot: true });
     this.declareSideEffects();
     this.onInit();
-    this.$binding.flush(); // call OnOnit on children
+    this.$binding.flush(); 
+    // call OnOnit on children
     // @tofix: empêcher conflict properties/data
   }
 
@@ -107,7 +109,9 @@ class CustomElement {
   provide(name, data) {
     Provider.register(name, data, this);
   }
-
+  
+  onStoreUpdated(key, value) {}
+  
   useProvider(name) {
     Provider.useProvider(name, this);
   }

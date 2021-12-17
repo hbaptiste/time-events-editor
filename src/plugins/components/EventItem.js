@@ -29,7 +29,7 @@ CustomElement.register({
     },
 
     declareSideEffects: function () {
-        this.registerSideEffects(this.handleItemSize, ["item", "itemStyle"]); // simplifier la notation
+        this.registerSideEffects(this.handleItemSize, ["item", "itemStyle","$count"]); // simplifier la notation
         this.registerSideEffects(this.handleItemSelection, ["selected"]); // simplifier la notation
     },
 

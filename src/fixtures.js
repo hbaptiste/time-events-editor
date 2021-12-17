@@ -1,63 +1,63 @@
-const initEventsFixtures = function(eventsRegistry) {
-  if (!eventsRegistry) {
-    return;
-  }
-  eventsRegistry.add({
-    rowName: "author",
-    label: "WG sebald",
-    start: 10 * 50,
-    duration: 120,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "concert",
-    label: "M.V. Chauvet",
-    start: 25 * 20,
-    duration: 160,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "Concept",
-    label: "Nabokov",
-    start: 40,
-    duration: 10,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "Concept",
-    label: "D.F. Wallace",
-    start: 310,
-    duration: 120,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "Author",
-    label: "Georges Perec",
-    name: "Concept",
-    start: 500,
-    duration: 120,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "MyTerm",
-    label: "color",
-    start: 125,
-    duration: 30,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "Harris",
-    label: "color",
-    start: 13 * 125,
-    duration: 300,
-    data: {}
-  });
-  eventsRegistry.add({
-    rowName: "Harris",
-    label: "color",
-    start: 15 * 125,
-    duration: 500,
-    data: {}
-  });
-};
-export { initEventsFixtures };
+export const messages = [
+  {
+    type: "Livres",
+    duration: ["2s", "4s"],
+    data: {
+      type: "text",
+      content: "1/ Le livre de Rolph Throuillot n'a pas été traduit en Français.",
+    },
+  },
+  {
+    type: "Livres",
+    duration: ["20s", "50s"],
+    data: {
+      type: "text",
+      content: "Différence structure.",
+    },
+  },
+  {
+    type: "Livres",
+    duration: ["30m", "35m"],
+    data: {
+      type: "text",
+      content: "2/ How to deal with that.",
+    },
+  },
+  {
+    type: "Livres",
+    duration: ["6s", "2m"],
+    data: {
+      type: "text",
+      content: "3/ now I have two books.",
+    },
+  },
+  {
+    type: "Livres",
+    duration: ["4m", "10m"],
+    data: {
+      type: "text",
+      content: "4/ now I have Seven books.",
+    },
+  },
+  {
+    type: "auteur",
+    duration: ["2m", "10m"],
+    data: { type: "text", content: "2/ Il s'agit de Surveiller et Punir" },
+  },
+  {
+    type: "Reference",
+    duration: ["5m", "15m"],
+    data: {
+      type: "text",
+      content: "3/ Le livre de Rolph Throuillot n'a pas été traduit en Français.",
+    },
+  },
+  {
+    type: "Reference",
+    duration: ["40m", "45m"],
+    data: {
+      type: "text",
+      content: "3/ Le livre de Rolph Throuillot <silencing the past> n'a pas encore été traduit en Français.",
+    },
+  },
+];
