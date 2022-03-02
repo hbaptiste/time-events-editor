@@ -1,7 +1,6 @@
 import CustomElement from "../../CustomElement";
 
 
-
 CustomElement.register({
     
     is: "content-viewer",
@@ -10,6 +9,10 @@ CustomElement.register({
 
     onInit: function() {
         console.log("-- onInit --");
+    },
+
+    onLinked: function() {
+        // alert(`${this.is} - isLinked!`);
     },
 
     getTemplate: function() {

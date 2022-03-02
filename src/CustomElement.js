@@ -4,6 +4,9 @@ import jss from "jss";
 import preset from "jss-preset-default";
 import { createStore } from "./Store";
 import cloneDeep from "clone-deep";
+import { arrayNotEmpty } from "./Utils";
+import { v4 as uuidv4 } from "uuid";
+
 
 jss.setup(preset());
 
@@ -74,10 +77,11 @@ class CustomElement {
   static instanceRegistry = new Map();
 
   constructor(params) {
-    // should we use mailBox instead 
+    //should we use mailBox for messages 
     this.mailBox = [];
     this.children = [];
     this.$injected = {};
+    this.$refs = {}
     this.$store = createStore("global"); // wrong inject as a params
     _handleProps(this, params);
     _handleStyle(this, params);
@@ -89,9 +93,8 @@ class CustomElement {
     this.$binding = DomDataBinding.applyMixin({ target: this, skipRoot: true });
     this.declareSideEffects();
     this.onInit();
-    this.$binding.flush(); 
-    // call OnOnit on children
-    // @tofix: empêcher conflict properties/data
+    // flush dep
+    this.$binding.flush();
   }
 
   onMessage(message, payload) {
@@ -139,12 +142,13 @@ class CustomElement {
     return source;
   }
 
+  // shandle object and array path
   setValue(path, value) {
     const [root, ...rest] = path.split(".");
-    const source = this[root] || this.data[root]; // harmoniser
-    const propsTarget = this.hasOwnProperty(root) ? "props" : "data"; // -> target props/data
+    const propsTarget = this.hasOwnProperty(root) ? "props" : "data"; //useReflect
+    const source = this[propsTarget][root]; // harmoniser
 
-    if (source) {
+    if (typeof source === "object" && arrayNotEmpty(rest)) {
       rest.reduce((acc, pathItem, index) => {
         if (index === rest.length - 1) {
           acc[pathItem] = value;
@@ -153,12 +157,10 @@ class CustomElement {
           return source[pathItem] || {};
         }
       }, source);
-      if (propsTarget === "props") {
-        this[root] = { ...source };
-      } else {
-        this.data[root] = { ...source };
-      }
     }
+    const target = propsTarget === "props" ? this : this.data;
+    target[root] = arrayNotEmpty(rest) ? {...source}: value;
+    
   }
   // get all props data
   getTemplateData() {
@@ -199,8 +201,11 @@ class CustomElement {
     const cloneConf = cloneDeep(componentConf); 
     const conf = { ...cloneConf, target, _props_: props };
     console.log(`creating a [${componentConf.is}] node!`);
-
-    return new CustomElement(conf);
+    const instanceUUID = uuidv4()
+  const component = new CustomElement(conf);
+  CustomElement.instanceRegistry.set(instanceUUID, component);
+  component.root.instanceUUID = instanceUUID;
+  return component;
   }
 
   static createFromDirective(name, { ctx, node }) {
@@ -238,6 +243,9 @@ class CustomElement {
       props: [], // fix should work without props
       target
     });
+  }
+  static getInstance(key) {
+    return CustomElement.instanceRegistry.get(key);
   }
 }
 

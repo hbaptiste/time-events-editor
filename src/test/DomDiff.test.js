@@ -1,0 +1,140 @@
+import { DomDiff, applyPatches, listToFragment } from "../DomDiff";
+import toBeType from "jest-tobetype";
+expect.extend(toBeType);
+
+// Testing the dom diffing library and components
+// test environement
+
+/** equal dom -> expect KEEP_NODE
+ * initial tree             target tree
+ * - ul                     - ul
+ *    li 1                      li 1
+ *    li 2                      li 2
+ *    li 3                      li 3
+ */
+
+const htmlToElement = function (string) {
+  const template = document.createElement("template");
+  template.innerHTML = string;
+  return template.content.firstChild;
+};
+
+const sourceTree = `<ul>
+                        <li>1</li>
+                        <li>2</li>
+                        <li>3</li>
+                    </ul>`;
+const targetTree = `<ul>
+                        <li>1</li>
+                        <li>2</li>
+                        <li>3</li>
+                    </ul>`;
+
+// to be an array
+// toContain
+//
+/*test("Expect Empty Patch", () => {
+  const source = htmlToElement(sourceTree);
+  const target = htmlToElement(targetTree);
+  const patches = DomDiff(source, target);
+  expect(patches).toBeType("array");
+  expect(patches.length).toBe(0);
+});*/
+
+const sourceTree_1 = `<ul>
+                        <li>1</li>
+                        <li>2</li>
+                        <li>3</li>
+                      </ul>`;
+const targetTree_1 = `<ul>
+                        <li>1</li>
+                        <li>2</li>
+                        <li>4</li>
+                      </ul>`;
+
+/*test("Expect TO REPLACE NODE", () => {
+  const source = htmlToElement(sourceTree_1);
+  const target = htmlToElement(targetTree_1);
+  const patches = DomDiff(source, target);
+  expect(patches).toBeType("array");
+  expect(patches.length).toBe(1);
+  const [patch] = patches;
+  //console.log(patches);
+  expect(patch.type).toBe("REPLACE_TEXT");
+});*/
+
+const sourceTree_2 = `<ul>
+                        <li>1</li>
+                        <ul>2</ul>
+                        <li>3</li>
+                      </ul>`;
+
+const targetTree_2 = `<ul>
+                        <li>1</li>
+                        <li>3</li>
+                        <li>3</li>
+                      </ul>`;
+
+// case same nodeType, not the same
+/*test("Expect NODE to Be Replaced", () => {
+    const source = htmlToElement(sourceTree_2);
+    const target = htmlToElement(targetTree_2);
+    const patches = DomDiff(source, target);
+    expect(patches).toBeType("array");
+    expect(patches.length).toBe(1);
+    const [patch] = patches
+    expect(patch.type).toBe("REPLACE_NODE");
+});*/
+//si en me positionnant je deviens voisin de moi/même
+const sourceTree_3 = `<ul>
+                        <li data-key='sec'>deux</li>
+                        <li data-key='premier'>premier</li>
+                        <li data-key='last'>last</li>
+                      </ul>`;
+
+const targetTree_3 = `<ul>
+                        <li data-key='premier'>premier</li>
+                        <li data-key='sec'>deux</li>
+                        <li data-key='last'>last</li>
+                      </ul>`;
+
+/**
+ * utiliser une clé pour
+ * expected result: [{type: MOVE_NODE, source: node, position: 1, }]
+ * comparer <li>2</li> à <li>3</li>. Diff
+ * Alors, regarder si li/3 se trouve dans tree_source
+ *  non: replace li/2 par li/3
+ *  oui: deplacer li/3(dans source) à la position de li.2(dans source)
+ *  ?: que faire de li/3(dans source)
+ *  autr?
+ */
+
+test("Expect Adjacent Node remove before append", () => {
+  const source = htmlToElement(sourceTree_3.trim());
+  const target = htmlToElement(targetTree_3.trim());
+  const patches = DomDiff(source, target);
+  expect(patches).toBeType("array");
+  expect(patches.length).toBe(2);
+  expect(patches[0].type).toBe("REMOVE_NODE");
+  expect(patches[1].type).toBe("APPEND_NODE");
+});
+
+// source
+const sourceTree_4 = `<ul>
+<li data-key='harris'>Harris</li>
+<li data-key='vane'>Vanessa</li>
+<li data-key='nono'>Nono</li>
+</ul>`;
+
+const targetTree_4 = `<ul>
+<li data-key='nono'>Nono</li>
+<li data-key='harris'>Harris</li>
+<li data-key='vane'>Vanessa</li>
+</ul>`;
+
+test("Expect Node to be moved to the tops", () => {
+  const source = htmlToElement(sourceTree_4.trim());
+  const target = htmlToElement(targetTree_4.trim());
+  const patches = DomDiff(source, target);
+  console.log(patches);
+});

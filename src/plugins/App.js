@@ -5,54 +5,82 @@ import ControlPlugin from "./ControlPlugin";
 import EventsRegistry from "../EventsRegistry"
 import { messages } from "../fixtures";
 
+/**
+ * to do : 
+ * - ref on elements
+ * - handle list / debug list
+ * - debug selector
+ * - Decorator ?
+ */
+
 CustomElement.register({
   is: "root-app",
   properties: ["event"],
   data: {
-    content: null
+    content: null,
+    isPlayerReady: false
   },
 
   onInit: function() {
     const tl = new TimelineFactory();
     const initTimeline = this.initTimeline.bind(this);
-
     /* testing fixtures */
-    document.body.onload = function() {
+   document.body.onload = function() {
       const video = document.querySelector("#mainvideo_html5_api")
-      video.oncanplay = () => initTimeline({ tl, video, tlSize: 500 })
+      video.oncanplay = () => { 
+          initTimeline({ tl, video, tlSize: 500 });        
+      }
     };
   },
 
 initTimeline: function ({ tl, video, tlSize }) {
+  if (this.data.isPlayerReady) {
+    return;
+  }
+
     tl.create({ duration: video.duration, repeat: true });
+    
     video.addEventListener("play", (_e) => {
       tl.start();
     });
-    video.addEventListener("pause", (e) => {
+    
+    video.addEventListener("pause", (_e) => {
       tl.stop();
     });
-    video.addEventListener("seeked", (e) => {
+    
+    video.addEventListener("seeked", (_e) => {
       tl.goto(video.currentTime * 1000); //currentTime is in sec
+      const { rateInfos } = this.$store.getState()
+      
+      const payload = { rateInfos, position: video.duration } 
+      // console.log(video.currentTime);
+      this.$store.emit({ type: "NEW_TICK", payload })
     });
+
     /*** UI Manager ***/
     const rateInfos = { duration: video.duration, tlSize }
     const initState = {
       rateInfos,
       messages,
-      currentEvent: null  
+      currentEvent: null,
+      currentPosition: 0,
     };
   
     const eventsRegistry = new EventsRegistry({
       timelineMng: tl,
-      uiManager: uiManager,
+      //uiManager: uiManager,
       rateInfos,
     });
     
-    this.$store.init({...initState})
-  /* UI Manager */
+   this.$store.init({...initState})
+    
+    // UI Manager
     const uiManager = new UiManager();
     uiManager.eventsRegistry = eventsRegistry;
     uiManager.use(ControlPlugin);
+    
+    // update player state
+    this.data.isPlayerReady = true; 
   },
 
   getTemplate: function() {

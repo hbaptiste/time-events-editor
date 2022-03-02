@@ -1,28 +1,3 @@
-/***
- * <div>
- *    <p>Radical Blaze</p>
- *    <ul>
- *      <li>Premier li</li>
- *      <li>Second Strop</li>
- *      <li> Last Blaz</li>
- *    </ul>
- *    <p>last</p>
- * </div>
- * <div>
- *   <ul>
- *     <li>NewElement</>
- *     <li>Blaze</li>
- *   </ul>
- * </div>
- * * remove extra element
- * * handle text node
- */
-/**
- * - test
- * - replace work -> OK
- * -
- */
-
 const createElement = function (name, content, children = []) {
   if (name === "TEXT") {
     return { type: "element", name };
@@ -39,102 +14,188 @@ const createElement = function (name, content, children = []) {
 // zip helper
 const zip = (a, b) => {
   const result = [];
+  const maxSize = Math.max(a.length, b.length);
   if (Array.isArray(a) && Array.isArray(b)) {
-    for (let i = 0; i < a.length; i++) {
-      result.push([a[i], b[i]]);
+    for (let i = 0; i < maxSize; i++) {
+      result.push([a[i], b[i], i]);
     }
   }
   return result;
 };
 
-// ? Comment connaitre l'état final du Dom
-export default function DomDiff(currentTree, newTree, patches = [], parent) {
-  if (!currentTree && !newTree) {
-    return;
+const hasChildren = (node) => {
+  return !isText(node) && node.childNodes.length > 0;
+};
+
+const isText = (node) => {
+  return node?.nodeType === 3;
+};
+
+/**
+ *  deux cas : old position/new position
+ *  ou : n'existe pas dans la liste
+ */
+
+const containsNode = (targetTree, node) => {
+  const index = 0;
+  for (let i = 0; i < targetTree.childNodes.length; i++) {
+    const currentNode = targetTree.childNodes[i];
+    console.log(currentNode);
   }
+};
+
+const createKeyMap = (list, key) => {
+  const result = {};
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    if (!isText(item)) {
+      const keyValue = item.dataset.key;
+      if (keyValue) {
+        result[keyValue] = i;
+      }
+    }
+  }
+  return result;
+};
+
+const getItemKey = (item) => {
+  return item?.dataset?.key;
+};
+
+const rmEmptyText = (nodes) => {
+  return nodes.filter((node) => {
+    return !isText(node) || (isText(node) && node.textContent.trim() !== "");
+  });
+};
+
+// ? Comment connaitre l'état final du Dom
+// si changement au niveau des enfants les faire avant
+export default function DomDiff(currentTree, newTree, index, patches = [], parent) {
+  if (!currentTree && !newTree) {
+    return null;
+  }
+
   if (!currentTree && parent) {
     patches.push({
       type: "APPEND_NODE",
       target: newTree,
       parentNode: parent,
     });
-  } else if (!newTree) {
+  } else if (currentTree && !newTree) {
     console.log("newTree is EMPTY");
-    Array.from(currentTree.childNodes).forEach((node) => {
-      patches.push({ type: "REMOVE_NODE", target: node });
-    });
+
+    // Array.from(currentTree.childNodes).forEach((node) => {
+    patches.push({ type: "REMOVE_NODE", target: currentTree });
+    // });
   } else if (!currentTree) {
-    patches.push({ type: "KEEP_NODE", source: newTree });
-  } else if (currentTree.nodeType !== newTree.nodeType) {
-    // replace old by new
+    patches.push({ type: "KEEP_NODE", target: newTree });
+  } else if (currentTree.tagName === newTree.tagName) {
+    if (hasChildren(currentTree) && hasChildren(newTree)) {
+      const currentTreeArr = rmEmptyText(Array.from(currentTree.childNodes));
+      const newTreeArr = rmEmptyText(Array.from(newTree.childNodes));
+
+      const currentTreeKM = createKeyMap(currentTreeArr, "key");
+      const newTreeKM = createKeyMap(newTreeArr, "key");
+
+      // clean original
+      for (let i = 0; i < currentTreeArr.length; i++) {
+        const item = currentTreeArr[i];
+        const itemKey = getItemKey(item);
+        if (itemKey && !Object.keys(newTreeKM).includes(itemKey)) {
+          item.parentNode.removeChild(item);
+          currentTreeArr.splice(i, 1);
+        }
+      }
+
+      /* handle move before anything else */
+      for (let i = 0; i < newTreeArr.length; i++) {
+        const newItem = newTreeArr[i];
+        const curItem = currentTreeArr[i];
+        const newItemKey = getItemKey(newItem);
+        const curItemKey = getItemKey(curItem);
+        if (!newItemKey && !curItemKey && newItemKey == curItemKey) {
+          continue; //item is already at the good position
+        }
+        // move if current item is at the wrong position
+        const curPosition = currentTreeKM[newItemKey];
+        if (!curPosition) {
+          // insert at position | simulate insertion
+          currentTreeArr.splice(i, 0, null);
+        } else if (curPosition && curPosition !== i) {
+          // handle adjacent item
+          if (newItemKey == getItemKey(currentTreeArr[i + 1])) {
+            patches.push({ type: "REMOVE_NODE", target: newItem, at: i });
+            currentTreeArr.splice(i, 1);
+          } else {
+            patches.push({ type: "ORDER_NODE", target: newItem, at: i });
+            currentTreeArr.splice(i, 0, currentTreeArr[curPosition]);
+          }
+        }
+      }
+      if (currentTreeArr.length > newTreeArr.length) {
+        const nbItems = currentTreeArr.length - newTreeArr.length;
+        //remove
+        console.log("-- nbItems --", nbItems);
+        //s currentTreeArr.splice(newTreeArr.length - 1, nbItems);
+      }
+      console.log("--- CURRENT-TREE ---");
+      console.log(currentTreeArr);
+      console.log("---------------------");
+      const zippedChildren = zip(Array.from(currentTreeArr), Array.from(newTreeArr));
+      // handle fragment wrapper parent Node
+      zippedChildren.forEach(([currentNode, newNode, index]) => {
+        DomDiff(currentNode, newNode, index, patches, currentTree);
+      });
+    } else if (isText(currentTree) && isText(newTree)) {
+      if (currentTree.textContent !== newTree.textContent) {
+        patches.push({
+          type: "REPLACE_TEXT",
+          oldValue: currentTree.textContent,
+          newValue: newTree.textContent,
+          target: currentTree,
+        });
+      }
+    } else {
+      patches.push({ type: "KEEP_NODE", target: currentTree });
+    }
+  } else {
+    // replace old by new | f
     patches.push({
       type: "REPLACE_NODE",
       source: currentTree,
       target: newTree,
     });
-  } else if (currentTree.nodeType === 3) {
-    // text
-    if (currentTree.textContent !== newTree.textContent) {
-      // contents
-      patches.push({
-        type: "REPLACE_TEXT",
-        oldValue: currentTree.textContent,
-        newValue: newTree.textContent,
-        target: currentTree,
-      });
-    }
-  } else {
-    const toRemoveCount =
-      currentTree.childNodes.length - newTree.childNodes.length;
-
-    let currentTreeNode = currentTree.childNodes;
-    if (toRemoveCount > 0) {
-      const restCount = currentTree.childNodes.length - toRemoveCount;
-      currentTreeNode = Array.from(currentTree.childNodes).slice(
-        0,
-        -toRemoveCount
-      );
-      const rest = Array.from(currentTree.childNodes).slice(restCount);
-
-      rest.forEach((node) => {
-        patches.push({
-          type: "REMOVE_NODE",
-          target: node,
-        });
-      });
-    }
-    const zippedChildren = zip(
-      Array.from(newTree.childNodes),
-      Array.from(currentTreeNode)
-    );
-    // handle fragment wrapper parent Node
-    zippedChildren.forEach(([newNode, oldNode]) => {
-      DomDiff(oldNode, newNode, patches, currentTree);
-    });
   }
+  // empty patch:no change detected -> keep node
   return patches;
 }
 
+/**
+ * Patches sections
+ */
+
 const fnMap = {
   APPEND_NODE: ({ target, parentNode }) => {
-    parentNode =
-      parentNode.nodeType === 11 && parentNode.targetParentNode
-        ? parentNode.targetParentNode
-        : parentNode;
+    parentNode = parentNode.nodeType === 11 && parentNode.targetParentNode ? parentNode.targetParentNode : parentNode;
     parentNode.appendChild(target);
   },
 
   REMOVE_NODE: ({ target }) => {
+    console.log("-- inside Remove Node --");
+    console.log("remove_node");
+    console.log(target);
     target.parentNode.removeChild(target);
   },
 
-  REPLACE_NODE: () => {},
+  REPLACE_NODE: () => {
+    return;
+  },
 
   REPLACE_TEXT: ({ newValue, target }) => {
     target.textContent = newValue;
   },
 
-  KEEP_NODE: ({ source }) => source,
+  KEEP_NODE: ({ target }) => target,
 };
 
 // Handle diff

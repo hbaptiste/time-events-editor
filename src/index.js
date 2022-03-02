@@ -1,5 +1,5 @@
-import DomDataBinding from "./DomDataBinding";
-import { initEventsFixtures } from "./fixtures";
+// import DomDataBinding from "./DomDataBinding";
+// import { initEventsFixtures } from "./fixtures";
 
 import "./Common.Binding";
 import "./plugins/components/ContentPanel";

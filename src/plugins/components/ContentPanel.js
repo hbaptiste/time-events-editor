@@ -76,6 +76,10 @@ CustomElement.register({
   onInit: function () { 
     this.useProvider("contentCtx");
   },
+  
+  onLinked: function() {
+    // alert(`${this.is} - isLinked!`);
+ },
 
   handleContent: function(newContent) {
     if (!newContent) { return }

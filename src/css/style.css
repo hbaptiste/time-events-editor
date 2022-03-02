@@ -127,7 +127,8 @@ body {
   border: 1px solid orange;
   height: 267px;
   position: absolute;
-  background-color: red 
+  background-color: red;
+  left: 0px;
 }
 .event-row {
   display: block;

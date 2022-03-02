@@ -31,8 +31,6 @@ class ParsedTime {
     this.h = params.h;
     this.min = params.min;
     this.sec = params.sec;
-    console.log("-- params --");
-    console.log(params);
   }
 
   toMilisec():number {
@@ -139,9 +137,16 @@ const parseTime = function(time:string): ParsedTime | null {
   } 
 
   const timeToDuration = function(time:string): string {
+    console.log("time", time);
     const timepart:Array<string> = time.split(":");
     const [h, min, sec] = timepart;
     return new ParsedTime({h: parseInt(h), min: parseInt(min), sec: parseInt(sec)}).format("duration");
   }
 
-export { createIterator, parseTime, toMillisec, timeToDuration };
+
+
+const arrayNotEmpty = (data:Array<unknown>): boolean => {
+  return Array.isArray(data) && data.length !== 0
+}
+
+export { createIterator, parseTime, toMillisec, timeToDuration, arrayNotEmpty };

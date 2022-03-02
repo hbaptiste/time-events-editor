@@ -43,7 +43,7 @@ const _parseEventsValue = function (value) {
   }
 };
 
-const LONG_DIRECTIVE_PATTERN = /(\w+):(\w+)=(.*)/i; 
+const LONG_DIRECTIVE_PATTERN = /(\w+):(\w+)=(.*)/i;
 const SHORT_DIRECTIVE_PATTERN = /@(\w+)(:\w+)?=(.*)/i;
 const PROPS_DIRECTIVE_PATTERN = /^\$(\w+)=(\w+)/i;
 
@@ -59,23 +59,26 @@ const isNormalAttribute = function (attr) {
   return true;
 };
 // _parseStyleValue
-const _parseStyleValue = function(value) {
+const _parseStyleValue = function (value) {
   // function / object
   const stylesPattern = {
-    REACTIVE_CALLBACK: new RegExp(/(\w+)(\((.*?)\))?/, "gm") // soit plus précis
+    REACTIVE_CALLBACK: new RegExp(/(\w+)(\((.*?)\))?/, "gm"), // soit plus précis
+  };
+  const result = stylesPattern.REACTIVE_CALLBACK.exec(value);
+  if (!result) {
+    return false;
   }
-  const result = stylesPattern.REACTIVE_CALLBACK.exec(value);  if (!result) { return false }
-  const [_, name ,__, params] = result;
+  const [_, name, __, params] = result;
   const type = params ? "callback" : "props";
-  return { name, type, params: params ? params.split(","): null }
-}
+  return { name, type, params: params ? params.split(",") : null };
+};
 
 // parse value
 const _parseValue = function (value, name) {
   const patterns = {
     click: _parseEventsValue,
     foreach: _parseDirectiveValue,
-    style: _parseStyleValue
+    style: _parseStyleValue,
   };
   const idFunction = (id) => id;
   const valueParser = patterns[name] || idFunction;
@@ -127,8 +130,10 @@ const _parseAttrDirective = function (attr) {
   return directive;
 };
 
-const parseDirectives = function (node=null, keys = []) {
-  if (!node) { return }
+const parseDirectives = function (node = null, keys = []) {
+  if (!node) {
+    return;
+  }
   if (!node.attributes) {
     return [];
   }
@@ -279,7 +284,6 @@ const visit = function (node, { enterVisitor, exitVisitor }) {
   return node;
 };
 
-
 /* create Node */
 const createNode = function (node) {
   const nodeType = node.nodeType === 3 ? "TEXT" : node.nodeName;
@@ -293,7 +297,7 @@ const createNode = function (node) {
     };
   } else {
     _node = {
-      type: isCustom ? "custom-element": "element",
+      type: isCustom ? "custom-element" : "element",
       isCustomElement: isCustom,
       name: nodeType,
       children: [],
@@ -309,15 +313,15 @@ const parseSection = function (node) {
   /** build tokens here */
   const textFilter = (node) => {
     if (node.nodeType == 3) {
-      const textContent = node.nodeValue.trim()
+      const textContent = node.nodeValue.trim();
       if (textContent == "") {
         return NodeFilter.FILTER_REJECT;
       }
     }
     return NodeFilter.FILTER_ACCEPT;
-  }
+  };
 
-  const { walker, skip } = createWalker({ root: node, filter: textFilter});
+  const { walker, skip } = createWalker({ root: node, filter: textFilter });
 
   /* -- find -- */
   let previousNode = null;
@@ -336,9 +340,9 @@ const parseSection = function (node) {
     }
   };
   walker((element) => {
-    let currentNode = createNode(element); 
+    let currentNode = createNode(element);
     if (!previousParent) {
-      root = currentNode //createNode(element);
+      root = currentNode; //createNode(element);
       root.isRoot = true;
       root.directives = parseDirectives(element);
       previousParent = root;
@@ -392,12 +396,12 @@ const renderSection = function ({ ctx, node, data }) {
   const rootCtx = new Context(ctx.target.getTemplateData());
   const ast = parseSection(node);
   if (!ast) {
-    throw 'ParsingError'; 
+    throw "ParsingError";
   }
-  
+
   /* setting contexts */
   const enterVisitor = (node, parent) => {
-    const parentCxt = parent ? parent.ctx : null
+    const parentCxt = parent ? parent.ctx : null;
     switch (node.type) {
       case "custom-element":
         node.ctx = node.ctx || parentCxt;
@@ -415,12 +419,12 @@ const renderSection = function ({ ctx, node, data }) {
           data = rootCtx.lookup(parentName) || [];
           node.ctx = rootCtx.createFrom({ [localName]: data });
         } else {
-          let itemCtx = (node.ctx || parent.ctx) || rootCtx.createFrom({ [localName]: data });
-          data = itemCtx ? itemCtx.lookup(parentName) : []
+          let itemCtx = node.ctx || parent.ctx || rootCtx.createFrom({ [localName]: data });
+          data = itemCtx ? itemCtx.lookup(parentName) : [];
           node.ctx = itemCtx.createFrom({ [localName]: data });
         }
-        node.directives = [...node.directives.filter(dir => dir.name !== "foreach")];
-        
+        node.directives = [...node.directives.filter((dir) => dir.name !== "foreach")];
+
         /* populate */
         // eslint-disable-next-line no-case-declarations
         let di = 0;
@@ -430,17 +434,17 @@ const renderSection = function ({ ctx, node, data }) {
           const item = iterable.next();
           const $index = iterable.cursor;
           const currentItem = Array.isArray(item) ? item[1] : item;
-          const $key = Array.isArray(item)? item[0] : $index;
-          
+          const $key = Array.isArray(item) ? item[0] : $index;
+
           const nodeFunc = (function (_item_) {
             return function (i) {
               let itemCtx = node.ctx.createFrom({ [localName]: _item_ });
-              itemCtx.extends({$key, $index});
+              itemCtx.extends({ $key, $index });
               return {
                 name,
                 ctx: itemCtx,
                 key: i,
-                type: isCustomElement ? "custom-element": "element",
+                type: isCustomElement ? "custom-element" : "element",
                 directives: [...node.directives],
                 attributes: [...node.attributes],
                 //children: [],
@@ -453,7 +457,7 @@ const renderSection = function ({ ctx, node, data }) {
         }
 
         /* transform */
-     newChildren.map((parent) => {
+        newChildren.map((parent) => {
           const childrenCopy = JSON.parse(JSON.stringify(node.children));
           parent.children = childrenCopy.map(function (_child_) {
             _child_.key = parent.key;
@@ -482,7 +486,10 @@ const renderSection = function ({ ctx, node, data }) {
   };
   const domData = visit(ast, { enterVisitor, exitVisitor });
 
-  return compile(domData, ctx);
+  const compiled = compile(domData, ctx);
+  console.log("--- AST ---");
+  console.log(ast);
+  return compiled;
 };
 
 const parse = function (node) {
@@ -547,9 +554,9 @@ const renderTemplate = function (tplContext, data) {
 };
 
 const createWalker = function (params) {
-  const { root, nodeToShow, rootIfEmpty=null } = params;
+  const { root, nodeToShow, rootIfEmpty = null } = params;
   const skippedList = [];
-  
+
   const filterFunc = (node) => {
     let keep = NodeFilter.FILTER_ACCEPT;
     if (typeof params.filter === "function") {
@@ -565,7 +572,7 @@ const createWalker = function (params) {
   const treeWalker = document.createTreeWalker(root, nodeToShow, filterFunc);
 
   const walker = (cb) => {
-    let currentNode = treeWalker.currentNode
+    let currentNode = treeWalker.currentNode;
     while (currentNode) {
       cb(currentNode, root);
       currentNode = treeWalker.nextNode();
@@ -603,15 +610,14 @@ const compile = function (ast, domBindingCtx) {
         const props = _propsFromDirectives(node);
         const { ctx: dataContext } = node;
 
-        return (function(cNode, cContext) {
+        return (function (cNode, cContext) {
           return () => {
             const renderedNode = domBindingCtx.renderBlock(cNode, cContext);
             return renderedNode;
-          }
-         
-        }(node, dataContext));
-      
-        /** test directive */
+          };
+        })(node, dataContext);
+
+      /** test directive */
       case "element":
         switch (node.name) {
           case "TEXT":
@@ -624,12 +630,12 @@ const compile = function (ast, domBindingCtx) {
                   const { exp = null } = token;
                   let value = "";
                   if (exp) {
-                    value = domBindingCtx.target.getValue(exp)
+                    value = domBindingCtx.target.getValue(exp);
                     if (!value || typeof value !== "string") {
-                      value = ctx.lookup(exp) || ""
+                      value = ctx.lookup(exp) || "";
                     }
                     const text = document.createTextNode(value);
-                    element.appendChild(text); 
+                    element.appendChild(text);
                   }
                 });
                 return element;
@@ -665,24 +671,24 @@ const compile = function (ast, domBindingCtx) {
         }
       case "fragment":
         let stmFrag = "";
-        if (node.isRoot) {
-          stmFrag = (function (_node_) {
-            return function (root) {
-              const rootFrag = document.createDocumentFragment();
-              const transformed = root.children.map(genCode) || [];
-              transformed.map((childFnc) => {
-                const child = childFnc();
-                _node_.attributes.forEach((attr) => {
-                  if (attr.value) {
-                    child.setAttribute(attr.name, attr.value);
-                  }
-                });
-                rootFrag.appendChild(child);
+        //if (node.isRoot) {
+        stmFrag = (function (_node_) {
+          return function (root) {
+            const rootFrag = document.createDocumentFragment();
+            const transformed = root.children.map(genCode) || [];
+            transformed.map((childFnc) => {
+              const child = childFnc();
+              _node_.attributes.forEach((attr) => {
+                if (attr.value) {
+                  child.setAttribute(attr.name, attr.value);
+                }
               });
-              return rootFrag;
-            };
-          })(node);
-        } else {
+              rootFrag.appendChild(child);
+            });
+            return rootFrag;
+          };
+        })(node);
+        /*} else {
           stmFrag = (function (_node_) {
             return function (root) {
               const children = node.children;
@@ -699,10 +705,10 @@ const compile = function (ast, domBindingCtx) {
               });
               return frag;
             };
-          })(node);
+          })(node); 
 
           return stmFrag;
-        }
+        }*/
         stm.push(stmFrag);
         break;
       default:

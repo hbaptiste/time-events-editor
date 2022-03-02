@@ -1,0 +1,18 @@
+import diff from "list-diff2";
+
+test("Move diff", () => {
+  const oldDom = [
+    { key: "harris", name: "Harris" }, //0
+    { key: "vanessa", name: "Vanessa" }, //1
+    { key: "dorah", name: "Dorah" }, //2
+  ];
+  const newDom = [
+    { key: "dorah", name: "Dorah" }, //0
+    { key: "vanessa", name: "Vanessa" }, //1
+    { key: "harris", name: "Harris" }, //2
+  ];
+  const diffing = diff(oldDom, newDom, "key");
+  console.log(diffing);
+
+  console.dir(JSON.stringify(diffing));
+});

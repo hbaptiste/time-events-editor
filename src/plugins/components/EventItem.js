@@ -18,6 +18,7 @@ CustomElement.register({
     data: {
         itemStyle: null, // -- > STRANGE < --
         selected: null,
+        messages: null
     },
 
     onInit: function() {
@@ -27,9 +28,13 @@ CustomElement.register({
         this.event = null;
         this.styleSetted = false;
     },
+    
+    onLinked: function() {
+        // alert(`${this.is} - isLinked!`); 
+    },
 
     declareSideEffects: function () {
-        this.registerSideEffects(this.handleItemSize, ["item", "itemStyle","$count"]); // simplifier la notation
+        this.registerSideEffects(this.handleItemSize, ["item", "itemStyle"]); // simplifier la notation
         this.registerSideEffects(this.handleItemSelection, ["selected"]); // simplifier la notation
     },
 
@@ -46,10 +51,12 @@ CustomElement.register({
         
         if (!item) { return }
         if (itemStyle !== null) { return false }
+        
         const { duration } = item;
         const event = duration.map(time => toMillisec(time));
         const STEP = 0.00013538552477210128
         const [ start, end ] = event;
+        
         // register events
         if (this.eventRegistered == false) {
             this.$injected.registerEvent(event);
@@ -61,12 +68,14 @@ CustomElement.register({
         this.data.itemStyle = {
                     position: "absolute",
                     left: (start * STEP) + 'px',
-                    width: ((end - start) * STEP) + 'px',
-                    height: '20px',
+                    //width: ((end - start) * STEP) + 'px',
+                    height: '10px',
+                    width: '10px',
+                    borderRadius: '50%',
                     backgroundColor: "lightgrey",
-                    bottom: '10px',
+                    bottom: '50%',
                     margin: 0,
-                    overflow: "hidden",
+                    //overflow: "hidden",
                     textOverflow: "ellipsis"
         }
         this.styleSetted = true;  

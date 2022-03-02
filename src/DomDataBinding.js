@@ -53,6 +53,7 @@ class UITaskQueue {
 
 export default class DomDataBinding {
   static directivesList = [];
+  static domObserved = null;
 
   static applyMixin = function (params) {
     return DomDataBinding.create(params);
@@ -61,6 +62,30 @@ export default class DomDataBinding {
   static create = function (params) {
     return new DomDataBinding(params).init();
   };
+
+  static startDomObserver = function(instances) {
+    if (DomDataBinding.domObserved) { return null }
+    const linkedComponentsList = new Map();
+    const observeComponentMutation = (mutations) => {
+      mutations.forEach((mutation) => {  
+        const source = [mutation.target,...Array.from(mutation.addedNodes)]
+        source
+          .filter(node => mutation.type === 'childList' && node.instanceUUID !== null)
+          .filter(node => linkedComponentsList.get(node.instanceUUID) !== null) // executed onces
+          .map(linkedComponent => {
+            const instance = CustomElement.getInstance(linkedComponent.instanceUUID);
+            if (instance) {
+              instance.onLinked();
+              linkedComponentsList.set(linkedComponent.instanceUUID);
+            }
+          });
+      });
+    }
+    // save instance
+    const mu = new MutationObserver(observeComponentMutation)
+    mu.observe(document.body, { childList: true, subtree: true })
+    DomDataBinding.domObserved = true;
+  }
 
   constructor(params) {
     this.uiTaskQueue = new UITaskQueue();
@@ -81,8 +106,11 @@ export default class DomDataBinding {
     this._parseAll();
     this._watchProps();
     this._watchData();
-    this._watchChildren(); // notify
+    // notify
+    this._watchChildren(); 
     this.uiTaskQueue.start();
+    // handle component events link/unlink
+    DomDataBinding.startDomObserver(); 
     return this; // Expose proper api
   }
 

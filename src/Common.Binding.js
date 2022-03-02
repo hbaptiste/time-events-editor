@@ -14,10 +14,6 @@ const getCounter = (function () {
   };
 })();
 
-/* set value */
-const setValue = (target, path, defaultValue) => {
-  notify(); // root
-};
 
 DomDataBinding.registerDirective("event", {
   init: (ctx, { node, value, modifier }) => {
@@ -29,6 +25,16 @@ DomDataBinding.registerDirective("event", {
     node.addEventListener(eventName, callback.bind(ctx.target));
   },
 });
+
+DomDataBinding.registerDirective("ref", {
+  init: (ctx, {node, value }) => {
+    
+    /*ctx.queued(() => {
+      
+    });*/
+  },
+});
+
 
 DomDataBinding.registerDirective("click", {
   init: function (ctx, { node, value, dataContext }) {
@@ -96,8 +102,7 @@ DomDataBinding.registerDirective("foreach", {
         const { ctx, values, preserveTag, sourceVariable, itemKey } = params;
         let dataList = [], target, savedList = [], previousSection;
         dataList = ctx.target.data[parentName] || values;
-        console.log("<data list>");
-        console.log(dataList, parentName);
+        console.log("preserveTag", preserveTag)
         if (!dataList) {
           return;
         }
@@ -110,6 +115,8 @@ DomDataBinding.registerDirective("foreach", {
             parentNode.appendChild(option);
           });
         } else {
+          console.log("--- // ---");
+          console.log(dataList);
           const renderedData = getRenderedItems(templateKey);
           // getList
           const getRederedList = () => {
@@ -118,14 +125,12 @@ DomDataBinding.registerDirective("foreach", {
 
           if (renderedData) {
             previousSection = renderedData.domSection;
-            target = renderedData.placeHolder;
+            target = renderedData.placeHolder;// où placer le nouveau noeud
           }
           /** place holder */
           let placeHolder = target && target.parentNode ? target : node;
           const emptyPlaceHolder = document.createElement("template");
-         
-          console.log("___ dataList ___")
-          console.log(dataList);
+
           let domSection = renderSection({
             ctx,
             data: dataList, // values
@@ -134,24 +139,23 @@ DomDataBinding.registerDirective("foreach", {
             parentName,
             preserveTag
           });
-    
           const patches = DomDiff(previousSection, domSection);
           if (!patches) {
             return;
           }
+
           const [patch] = patches;
           if (patch && patch.type === "KEEP_NODE") {
-            if (!patch.source.childNodes.length) {
+            if (!patch.target.childNodes.length) {
               placeHolder.replaceWith(emptyPlaceHolder);
               setRenderedItems(templateKey, {
                 placeHolder: emptyPlaceHolder,
                 domSection: null,
               });
             } else {
-              Array.from(patch.source.childNodes).forEach((_node) => {
+              Array.from(patch.target.childNodes).forEach((_node) => {
                 savedList.push(_node);
               });
-
               // why it can be null ?
               const parentnode = placeHolder.parentNode;
               placeHolder.parentNode.insertBefore(domSection, placeHolder); // fragment -> empty after insertion
@@ -169,12 +173,15 @@ DomDataBinding.registerDirective("foreach", {
             let listPlaceHolder;
             let previousList = getRederedList();
             if (previousList.length > 0) {
-              // we add placeholder in case the list
+              // we add placeholder in the list
               const [head] = previousList;
               listPlaceHolder = document.createElement("template");
               head.parentNode.insertBefore(listPlaceHolder, head);
             }
             applyPatches(patches);
+            console.log("-- apply patches --");
+            console.log(patches);
+            console.log("-----------");
 
             // get the new dom state
             const listAfter = getRederedList();
@@ -191,6 +198,7 @@ DomDataBinding.registerDirective("foreach", {
               placeHolder: listPlaceHolder,
               domSection: savedList,
             };
+           
             setRenderedItems(templateKey, data);
           }
         }
@@ -239,6 +247,27 @@ DomDataBinding.registerDirective("model", {
         });
         break;
       case "SELECT":
+        ctx.signals.valueChanged.connect(({key, value:dataValue}) => {
+          if (key !== params.value || dataValue === null) { return }
+           
+          const options = Array.from(node.options).map(option => option.value);
+          const selectedIndex = options.indexOf(dataValue.trim());
+          if (selectedIndex !== -1) {
+            node.selectedIndex = selectedIndex;
+            node.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+          // handle change, prevent loop
+          node.addEventListener("change", (e) => {
+            const prevValue = ctx.target.getValue(key);
+            console.log(`[${e.target.value.trim()} - ${prevValue}]`)
+            if (e.target.value.trim() !== prevValue.trim()) {
+              ctx.target.setValue(key, e.target.value);
+             }
+          });
+          
+        });
+        // handle change
+        
         break;
       case "INPUT":
   
@@ -252,15 +281,11 @@ DomDataBinding.registerDirective("model", {
           );
         break;
       default:
-        const handleValue = (dataKey, dataValue) => {
-          const [root] = key.split(".");
-          if (dataKey !== root) {
-            return false;
-          }
-          if (node.textContent === ctx.target.getValue(key)) {
+        const handleValue = ({key, value:dataValue}) => {
+         
+         if (node.textContent === ctx.target.getValue(key)) {
             return;
           }
-          console.log(`data-value ${dataValue}!`);
           node.textContent = ctx.target.getValue(key);
         };
 
@@ -268,26 +293,7 @@ DomDataBinding.registerDirective("model", {
           ctx.target.setValue(key, event.target.textContent);
         });
 
-        ctx.signals.dataChanged.connect(handleValue);
-        ctx.signals.propsChanged.connect(handleValue);
-    }
-    if (nodeType === "SELECT") {
-      ctx.signals.dataChanged.connect((dataKey, keyValue) => {
-        if (dataKey !== key) return false;
-        const computation = function () {
-          const options = Array.from(node.options).map(
-            (option) => option.value
-          );
-          const index = options.indexOf(keyValue);
-          if (index !== -1) {
-            node.selectedIndex = index;
-          }
-        };
-        ctx.queued(computation);
-      });
-      node.addEventListener("change", (e) => {
-        ctx.target.data[key] = e.target.value;
-      });
+        ctx.signals.valueChanged.connect(handleValue)
     }
   },
 });
@@ -408,10 +414,22 @@ DomDataBinding.registerDirective("style", {
   }
 });
 
-DomDataBinding.registerDirective("key", {
-  init: function(ctx, { node, value, component}) {}
+DomDataBinding.registerDirective("value", {
 
-});
+  init: function(ctx, { node, value:directiveName }) {
+    console.log(" -- radical / mémoire --");
+    console.log(ctx, directiveName, node);
+    
+    // events
+    ctx.signals.valueChanged.connect(({ key, value:val }) => {
+      console.log(key, val);
+      if (key !== directiveName) { return }
+      // set value
+      alert("-- radical blaze --");
+      console.log(key, val);
+    });
+  }
+})
 
 
 export {};

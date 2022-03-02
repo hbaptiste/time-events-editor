@@ -1,4 +1,5 @@
 import CustomElement from "../../CustomElement";
+import "./TagEditor";
 
 CustomElement.register({
   is: "event-form",
@@ -7,21 +8,14 @@ CustomElement.register({
     startPosition: 1
   },
 
-  onInit: function () {
-    this.useProvider("eventCtx") // implementing alias
-    console.log(this.$store.getState())
-  },
+  providers: ["eventCtx"], // @todo
 
-  onStoreUpdated: function(key, value) {
-    console.log("/* value */", key);
-    console.log(value);
+  onInit: function () {
+    this.useProvider("eventCtx")// use provider
   },
 
   declareSideEffects: function () {
     this.registerSideEffects(this.effectLoadEvent, ["event"]); // simplifier la notation
-  /*  return [
-      { "effectLoadEvent": ["event"] }, 
-    ] */
   },
 
   createEmptyEvent: function () {
@@ -32,17 +26,21 @@ CustomElement.register({
     if (!event) {
       return;
     }
-    console.log("------- event-form -----");
-    console.log(event);
+    this.data.evt = event;
+    //sthis.event = event;
   },
+  
+  onLinked: function() {
+    // alert(`${this.is} - isLinked!`);
+ },
   
   events: {
     createEvent: function () {
 
-      //console.log(this.event);
-      //this.$injected.upda
-      //this.$store.emit({type: "REGISTER_NEW_EVENT", payload: this.event})
-      this.$injected.addNewEvent(this.event);
+      //this.$store.emit({type: "REGISTER_NEW_EVENT", payload: this.data.evt})
+      // console.log("----..-------");
+      // console.log(this.data.evt);
+      this.$injected.addNewEvent(this.data.evt);
       this.$injected.closeForm();
     },
 
@@ -56,6 +54,12 @@ CustomElement.register({
 
     _handleEndChange: function(event) {
       this.data.end
+    },
+
+    _handleType: function(event) {
+
+      const value = event.target.value.trim();
+      this.data.evt = { ...this.data.evt, type: value };
     }
   },
 
@@ -64,19 +68,19 @@ CustomElement.register({
                 <div class="event-form-control" style="border: 1px solid red">
                     <span class="clsBtn" @click="close">X</span>
                   <div class="fixed">
+                    <tag-editor $title="Event Type" @event:change="_handleType"></tag-editor>
                     <label class="field-label">
                       Event name
-                      <input @model="event.name" class="event-name" /> 
+                      <input @model="evt.name" class="event-name" /> 
                     </label>
                     <label class="field-label steps">
-                      Start at: <input @model="event.start" type="time" value="00:00:00" step="1" class="slider">
+                      Start at: <input @model="evt.start" type="time" value="00:00:00" step="1" class="slider">
                     </label>
                     <label class="field-label steps">
-                     / End at <input @model="event.end" type="time" value="00:00:00" step="1" "class="slider">
+                     / End at <input @model="evt.end" type="time" value="00:00:00" step="1" "class="slider">
                     </label>
                     <div>
-                      <textarea class="event-content" @model="event.detail">This is my content...</textarea>
-                      <p><span>tag</span>: Harris, baptiste, strange</p>
+                      <textarea class="event-content" @model="evt.detail">This is my content...</textarea>
                     </div>
                   </div>
                   <p><button @click="createEvent" id="createBtn">Créer</button></p>

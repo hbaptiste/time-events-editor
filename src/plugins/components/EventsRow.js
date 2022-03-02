@@ -8,14 +8,16 @@ CustomElement.register({
   
   data: {},
   
-  onInit: function() {
-    console.log("-- on Init [eventsrow]--");
-  },
+  onInit: function() {},
+ 
+  onLinked: function() {
+    // alert(`${this.is} - isLinked!`);
+ },
 
   getTemplate: function () {
     return `<template>
               <div class="event-item-container">
-                <event-item km:foreach="evt in eventsrow" $item="evt" @key="strange"></event-item>
+                <event-item km:foreach="evt in eventsrow" $item="evt"></event-item>
               </div>
             </template>`;
   },

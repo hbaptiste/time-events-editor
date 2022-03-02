@@ -1,6 +1,8 @@
 import CustomElement from "../CustomElement";
 import DomDataBinding from "../DomDataBinding";
 import { timeToDuration } from "../Utils"
+import { selectMessages, selectSpecialPosition } from "./selectors"
+import { cloneDeep } from 'lodash';
 
 export default class ControlPlugin {
   
@@ -37,18 +39,30 @@ export default class ControlPlugin {
         console.log("--- radical ---");
       },
 
+
       onInit: function () {
+        //new Message should be observed
+        this.$store
+          .select([selectMessages, selectSpecialPosition])
+          .watch((messages, position) => {
+            console.log(cloneDeep(messages));
+            this.data.messages = messages;
+            // console.log(messages, position);
+          })
+        // --> execute x => func, si selectMessage change
         const contentUpdater = (lastContent) => {
-          this.data.content = lastContent;
           // messages from --> deal with update after
+          this.data.content = lastContent;
           this.$store.emit({type: "", payload: lastContent});
         };
 
         const registerEvent = (event) => {
           const [start, end] = event;
+          
           uiManager.eventsRegistry.tl.onTick((event) => {
             this.$store.emit({ type: "START_EVENT", payload: event }) 
           }, start);
+
           uiManager.eventsRegistry.tl.onTick((event) => {
             this.$store.emit({ type: "END_EVENT", payload: event }) 
           }, end);
@@ -57,7 +71,7 @@ export default class ControlPlugin {
         const { uiManager } = this.data;        
         const { messages, rateInfos } = this.$store.getState()
         // set the messages
-        this.data.messages = messages;
+        this.data.messages = cloneDeep(messages);
 
         uiManager.eventsRegistry.tl.onTick((e) => {
           const payload = {...e, rateInfos};
@@ -66,18 +80,25 @@ export default class ControlPlugin {
 
         // @todo -> Provider API : only provide for children
         this.provide("eventCtx", {
-          messages: this.data.messages, //allow (func)
+          messages: [],//this.data.messages, //allow (func)
           title: this.data.title,
           registerEvent: registerEvent,
+
           closeForm: () => {
             this.data.displayEventForm = false;
           },
+
           addNewEvent: (event) => {
             // clean message
             const {start, end} = event;
-            event.duration = [timeToDuration(start), timeToDuration(end)]
+            const newEvent = {
+              type: event.type,
+              duration : [timeToDuration(start), timeToDuration(end)],
+              data: { type: "text", content: event.detail }
+            }
             // console log indeed
-            this.$store.emit({type: "NEW_CREATED_EVENT", payload: event})
+           
+          this.$store.emit({type: "NEW_CREATED_EVENT", payload: newEvent})
           }
         });
 
@@ -90,15 +111,11 @@ export default class ControlPlugin {
       //use selector => return a new function with selector?
       onMessage: function({state, type, payload, $commit}) {
         if (type !== "NEW_CREATED_EVENT") { return }
-        alert("--alert--")
-        console.log("-- on message --");
-        console.log("-- radical blaze --");
-        console.log("-- type --")
-        console.log(type, state);
-        console.log(payload);
         const {messages=[]} = state;
-        messages.push(payload)
-        $commit({ ...state, messages});
+        const _messages = cloneDeep(messages);
+        // messages
+        _messages.push(payload)
+        $commit({ ...state, messages: _messages })
       },
 
       _createEmptyEvent: function () {
@@ -106,9 +123,9 @@ export default class ControlPlugin {
           name: "First Event",
           start: "10mn",
           end: "20mn",
-          tags: ["livre", "idées"],
           detail: "En dehors de tout ! How they did it !",
-          type: "authors"
+          type: "auteur",
+          tags: []
         };
       },
 
@@ -131,8 +148,6 @@ export default class ControlPlugin {
         showEventForm: function () {
           this.data.displayEventForm = true;
           this.data.event = this._createEmptyEvent();
-          console.log("-- nature --");
-          console.log(this.data.event);
         },
 
         createEvent: (event, second) => {
