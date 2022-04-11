@@ -63,16 +63,18 @@ export default class DomDataBinding {
     return new DomDataBinding(params).init();
   };
 
-  static startDomObserver = function(instances) {
-    if (DomDataBinding.domObserved) { return null }
+  static startDomObserver = function (instances) {
+    if (DomDataBinding.domObserved) {
+      return null;
+    }
     const linkedComponentsList = new Map();
     const observeComponentMutation = (mutations) => {
-      mutations.forEach((mutation) => {  
-        const source = [mutation.target,...Array.from(mutation.addedNodes)]
+      mutations.forEach((mutation) => {
+        const source = [mutation.target, ...Array.from(mutation.addedNodes)];
         source
-          .filter(node => mutation.type === 'childList' && node.instanceUUID !== null)
-          .filter(node => linkedComponentsList.get(node.instanceUUID) !== null) // executed onces
-          .map(linkedComponent => {
+          .filter((node) => mutation.type === "childList" && node.instanceUUID !== null)
+          .filter((node) => linkedComponentsList.get(node.instanceUUID) !== null) // executed onces
+          .map((linkedComponent) => {
             const instance = CustomElement.getInstance(linkedComponent.instanceUUID);
             if (instance) {
               instance.onLinked();
@@ -80,19 +82,19 @@ export default class DomDataBinding {
             }
           });
       });
-    }
+    };
     // save instance
-    const mu = new MutationObserver(observeComponentMutation)
-    mu.observe(document.body, { childList: true, subtree: true })
+    const mu = new MutationObserver(observeComponentMutation);
+    mu.observe(document.body, { childList: true, subtree: true });
     DomDataBinding.domObserved = true;
-  }
+  };
 
   constructor(params) {
     this.uiTaskQueue = new UITaskQueue();
     this.signals = {
       dataChanged: Signal.create("data.watcher"),
       propsChanged: Signal.create("props.watcher"),
-      valueChanged: Signal.create("dataOrProps.watcher")
+      valueChanged: Signal.create("dataOrProps.watcher"),
     };
     this.namespace = "km" || params.namespace;
     if (params && typeof params === "object") {
@@ -107,10 +109,10 @@ export default class DomDataBinding {
     this._watchProps();
     this._watchData();
     // notify
-    this._watchChildren(); 
+    this._watchChildren();
     this.uiTaskQueue.start();
     // handle component events link/unlink
-    DomDataBinding.startDomObserver(); 
+    DomDataBinding.startDomObserver();
     return this; // Expose proper api
   }
 
@@ -130,7 +132,7 @@ export default class DomDataBinding {
     // handle,attribute,style
     const { directives } = node;
     const target = document.createElement(node.name);
-    
+
     const component = CustomElement.createFromNode({
       componentName: node.name,
       props: [], // fix should work without props
@@ -142,17 +144,19 @@ export default class DomDataBinding {
       // --> register child
       directive.component = component;
       directive.dataContext = dataContext; // useful to retrieve data
-      this.applyDirective({ctx: this, directiveConfig: directive});
+      this.applyDirective({ ctx: this, directiveConfig: directive });
     });
-     /* populate props from context */
+    /* populate props from context */
     /* const { properties } = component;
-     directives.filter( dir => dir.name == "props:watcher" ).forEach((dir) => {
-       const { targetProp=null, sourceProp=null } = dir.value;
-       if (properties.indexOf(targetProp) !== -1) {
-         component[targetProp] = dataContext.lookup(sourceProp); // debug set value
-       }
-     });*/
-     
+    directives
+      .filter((dir) => dir.name == "props:watcher")
+      .forEach((dir) => {
+        const { targetProp = null, sourceProp = null } = dir.value;
+        if (properties.indexOf(targetProp) !== -1) {
+          component[targetProp] = dataContext.lookup(sourceProp); // debug set value
+        }
+      });*/
+
     // apply directives
     return component.root;
   }
@@ -165,10 +169,10 @@ export default class DomDataBinding {
 
     walker((node) => {
       const fEachDirective = this._hasForeach(node, ["foreach"]);
-      const hasForeach = fEachDirective.length
+      const hasForeach = fEachDirective.length;
       if (hasForeach) {
         // handle component and stuff ?
-        const directive  = fEachDirective.pop();
+        const directive = fEachDirective.pop();
         directive.component = this.target;
         this._handleForEachDirective({ node, directive });
         skip();
@@ -184,7 +188,6 @@ export default class DomDataBinding {
   _hasForeach(node) {
     return this.getDirectives(node, ["foreach"]);
   }
-
 
   /* directives and components */
   _handleParts(node) {
@@ -204,7 +207,6 @@ export default class DomDataBinding {
   }
 
   _watchData() {
-    
     if (!this.target.data || typeof this.target.data != "object") {
       return;
     }
@@ -221,7 +223,7 @@ export default class DomDataBinding {
           const prevValue = data[key];
           this.__observedData[key] = value;
           this.signals.dataChanged.emit(key, value, prevValue);
-          this.signals.valueChanged.emit({type: "data", key, value, prevValue});
+          this.signals.valueChanged.emit({ type: "data", key, value, prevValue });
         },
       });
     });
@@ -234,7 +236,7 @@ export default class DomDataBinding {
     if (!this.target.props || typeof this.target.props !== "object") {
       return;
     }
-    
+
     const props = this.target.props;
     const propsToWatch = this.target.properties;
 
@@ -251,10 +253,10 @@ export default class DomDataBinding {
         },
         set: (value) => {
           if (initialProps.hasOwnProperty(key)) {
-            const prevValue = this.__observedProps[key] || null ;
+            const prevValue = this.__observedProps[key] || null;
             this.__observedProps[key] = value;
             this.signals.propsChanged.emit(key, value, prevValue);
-            this.signals.valueChanged.emit({type: "props", key, value, prevValue});
+            this.signals.valueChanged.emit({ type: "props", key, value, prevValue });
           }
         },
       });
@@ -363,7 +365,7 @@ export default class DomDataBinding {
       throw `Directive [${name}] not Found!`;
     }
     try {
-      directive.init(ctx, directiveConfig); 
+      directive.init(ctx, directiveConfig);
     } catch (reason) {
       console.log(`Exception while applying ${name} directive !`);
       console.log(reason);
@@ -402,7 +404,7 @@ export default class DomDataBinding {
 
     // deal with node directive
     mainDirectives = this.getDirectives(node); // handle dropped directive
-    
+
     if (handleParent && parentNode) {
       parentDirectives = this.getDirectives(parentNode);
     }
@@ -410,7 +412,9 @@ export default class DomDataBinding {
     let templateDirectives = this._handleTemplateExpressions(node);
 
     allDirectives = [...templateDirectives, ...mainDirectives, ...parentDirectives];
-    if (allDirectives.length === 0) { return }
+    if (allDirectives.length === 0) {
+      return;
+    }
     allDirectives.map((directive) => {
       try {
         if (directive.name === FOREACH_DIRECTIVE) {
@@ -424,10 +428,12 @@ export default class DomDataBinding {
     });
   }
 
-  _handleForEachDirective({node, directive}) {
-    if (directive.name !== FOREACH_DIRECTIVE) { return }
+  _handleForEachDirective({ node, directive }) {
+    if (directive.name !== FOREACH_DIRECTIVE) {
+      return;
+    }
     setNodeTemplate(node);
-    this.applyDirective({ctx: this, directiveConfig: directive});
+    this.applyDirective({ ctx: this, directiveConfig: directive });
   }
 
   _parseAttrProps(attr) {

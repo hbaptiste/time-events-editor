@@ -36,14 +36,6 @@ const isText = (node) => {
  *  ou : n'existe pas dans la liste
  */
 
-const containsNode = (targetTree, node) => {
-  const index = 0;
-  for (let i = 0; i < targetTree.childNodes.length; i++) {
-    const currentNode = targetTree.childNodes[i];
-    console.log(currentNode);
-  }
-};
-
 const createKeyMap = (list, key) => {
   const result = {};
   for (let i = 0; i < list.length; i++) {
@@ -74,8 +66,11 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
   if (!currentTree && !newTree) {
     return null;
   }
-
+  console.clear("-- inside DomDiff --");
+  console.log([currentTree, newTree, parent]);
   if (!currentTree && parent) {
+    console.log("-- parent --");
+    console.log(parent);
     patches.push({
       type: "APPEND_NODE",
       target: newTree,
@@ -113,7 +108,10 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
         const curItem = currentTreeArr[i];
         const newItemKey = getItemKey(newItem);
         const curItemKey = getItemKey(curItem);
-        if (!newItemKey && !curItemKey && newItemKey == curItemKey) {
+        if (!newItemKey && !curItemKey) {
+          continue;
+        }
+        if (newItemKey == curItemKey) {
           continue; //item is already at the good position
         }
         // move if current item is at the wrong position
@@ -122,25 +120,27 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
           // insert at position | simulate insertion
           currentTreeArr.splice(i, 0, null);
         } else if (curPosition && curPosition !== i) {
-          // handle adjacent item
-          if (newItemKey == getItemKey(currentTreeArr[i + 1])) {
+          // DJW - move algo
+          // -> cut and past
+          const data = currentTreeArr[curPosition];
+          currentTreeArr.splice(curPosition, 1); // cut
+          currentTreeArr.splice(i, 0, data); // paste
+          patches.push({ type: "MOVE_NODE", target: newItem, at: i });
+        }
+        // handle adjacent item
+        /*if (newItemKey == getItemKey(currentTreeArr[i + 1])) {
             patches.push({ type: "REMOVE_NODE", target: newItem, at: i });
             currentTreeArr.splice(i, 1);
           } else {
             patches.push({ type: "ORDER_NODE", target: newItem, at: i });
             currentTreeArr.splice(i, 0, currentTreeArr[curPosition]);
           }
-        }
+        }*/
       }
       if (currentTreeArr.length > newTreeArr.length) {
         const nbItems = currentTreeArr.length - newTreeArr.length;
         //remove
-        console.log("-- nbItems --", nbItems);
-        //s currentTreeArr.splice(newTreeArr.length - 1, nbItems);
       }
-      console.log("--- CURRENT-TREE ---");
-      console.log(currentTreeArr);
-      console.log("---------------------");
       const zippedChildren = zip(Array.from(currentTreeArr), Array.from(newTreeArr));
       // handle fragment wrapper parent Node
       zippedChildren.forEach(([currentNode, newNode, index]) => {
@@ -156,6 +156,7 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
         });
       }
     } else {
+      console.log("> push node...");
       patches.push({ type: "KEEP_NODE", target: currentTree });
     }
   } else {
@@ -176,15 +177,17 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
 
 const fnMap = {
   APPEND_NODE: ({ target, parentNode }) => {
+    console.log(parentNode);
     parentNode = parentNode.nodeType === 11 && parentNode.targetParentNode ? parentNode.targetParentNode : parentNode;
     parentNode.appendChild(target);
   },
 
   REMOVE_NODE: ({ target }) => {
-    console.log("-- inside Remove Node --");
-    console.log("remove_node");
-    console.log(target);
     target.parentNode.removeChild(target);
+  },
+
+  MOVE_NODE: ({ target }) => {
+    return;
   },
 
   REPLACE_NODE: () => {

@@ -172,7 +172,7 @@ const parseTextNodeExpressions = function (textContent) {
   const pattern = new RegExp("{.*?}", "gm");
   const strings = [];
   let nextStart = 0;
-  let tokens = [];
+  const tokens = [];
   let prevString = "";
   let token;
   while ((token = pattern.exec(textContent)) !== null) {
@@ -340,7 +340,7 @@ const parseSection = function (node) {
     }
   };
   walker((element) => {
-    let currentNode = createNode(element);
+    const currentNode = createNode(element);
     if (!previousParent) {
       root = currentNode; //createNode(element);
       root.isRoot = true;
@@ -398,7 +398,6 @@ const renderSection = function ({ ctx, node, data }) {
   if (!ast) {
     throw "ParsingError";
   }
-
   /* setting contexts */
   const enterVisitor = (node, parent) => {
     const parentCxt = parent ? parent.ctx : null;
@@ -410,7 +409,7 @@ const renderSection = function ({ ctx, node, data }) {
         node.ctx = node.ctx || parentCxt;
         break;
       case "section":
-        let { localName, parentName } = node.sectionInfos;
+        const { localName, parentName } = node.sectionInfos;
         const [pName] = parentName.split(".");
         const { name, isCustomElement } = node;
         let data = [];
@@ -419,7 +418,7 @@ const renderSection = function ({ ctx, node, data }) {
           data = rootCtx.lookup(parentName) || [];
           node.ctx = rootCtx.createFrom({ [localName]: data });
         } else {
-          let itemCtx = node.ctx || parent.ctx || rootCtx.createFrom({ [localName]: data });
+          const itemCtx = node.ctx || parent.ctx || rootCtx.createFrom({ [localName]: data });
           data = itemCtx ? itemCtx.lookup(parentName) : [];
           node.ctx = itemCtx.createFrom({ [localName]: data });
         }
@@ -438,7 +437,7 @@ const renderSection = function ({ ctx, node, data }) {
 
           const nodeFunc = (function (_item_) {
             return function (i) {
-              let itemCtx = node.ctx.createFrom({ [localName]: _item_ });
+              const itemCtx = node.ctx.createFrom({ [localName]: _item_ });
               itemCtx.extends({ $key, $index });
               return {
                 name,
@@ -485,10 +484,7 @@ const renderSection = function ({ ctx, node, data }) {
     }
   };
   const domData = visit(ast, { enterVisitor, exitVisitor });
-
   const compiled = compile(domData, ctx);
-  console.log("--- AST ---");
-  console.log(ast);
   return compiled;
 };
 
@@ -623,22 +619,26 @@ const compile = function (ast, domBindingCtx) {
           case "TEXT":
             const textStm = (function (_node_) {
               return function () {
-                const element = document.createDocumentFragment();
+                const element = document.createDocumentFragment(); // tochange
                 const { tokens } = parseTextNodeExpressions(node.value);
+
                 const { ctx } = node;
+                let textCtn = "";
                 tokens.map((token) => {
                   const { exp = null } = token;
                   let value = "";
                   if (exp) {
                     value = domBindingCtx.target.getValue(exp);
+
                     if (!value || typeof value !== "string") {
                       value = ctx.lookup(exp) || "";
                     }
-                    const text = document.createTextNode(value);
-                    element.appendChild(text);
+                    textCtn += value;
+                  } else {
+                    textCtn += token.value;
                   }
                 });
-                return element;
+                return document.createTextNode(textCtn);
               };
             })(node);
             return textStm;

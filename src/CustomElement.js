@@ -7,11 +7,10 @@ import cloneDeep from "clone-deep";
 import { arrayNotEmpty } from "./Utils";
 import { v4 as uuidv4 } from "uuid";
 
-
 jss.setup(preset());
 
 const _handleProps = function (component, params) {
-  const { properties, target, _props_=[] } = params; //handle prop type of
+  const { properties, target, _props_ = [] } = params; //handle prop type of
   if (!target) {
     return false;
   }
@@ -20,15 +19,15 @@ const _handleProps = function (component, params) {
   params.props = {};
   properties.map((propName) => {
     if (Array.isArray(_props_)) {
-        const propsInfos = _props_.find((current) => current.name === propName);
-        if (propsInfos) {
+      const propsInfos = _props_.find((current) => current.name === propName);
+      if (propsInfos) {
         const { name, value } = propsInfos;
         params.props[name] = value;
       } else {
-        params.props[propName] = null //init props
+        params.props[propName] = null; //init props
       }
     } else {
-     throw "props should be an array"; 
+      throw "props should be an array";
     }
   });
   delete params._props_;
@@ -42,7 +41,10 @@ const _handleTarget = function (component, params) {
   }
   const wrapper = document.createElement("div");
   const { classes = null } = params.__sheet__;
-  wrapper.innerHTML = params.getTemplate(classes).trim().replace(/^(&nbsp;|\s)*/, '');
+  wrapper.innerHTML = params
+    .getTemplate(classes)
+    .trim()
+    .replace(/^(&nbsp;|\s)*/, "");
   const template = wrapper.firstChild;
   if (template.tagName !== "TEMPLATE") {
     throw new Error(`TemplateTagMissing for ${params.is}!`);
@@ -71,17 +73,16 @@ const _handleStyle = function (component, params) {
   }
 };
 
-
 class CustomElement {
   static elementsRegistry = new Map();
   static instanceRegistry = new Map();
 
   constructor(params) {
-    //should we use mailBox for messages 
+    //should we use mailBox for messages
     this.mailBox = [];
     this.children = [];
     this.$injected = {};
-    this.$refs = {}
+    this.$refs = {};
     this.$store = createStore("global"); // wrong inject as a params
     _handleProps(this, params);
     _handleStyle(this, params);
@@ -112,9 +113,9 @@ class CustomElement {
   provide(name, data) {
     Provider.register(name, data, this);
   }
-  
+
   onStoreUpdated(key, value) {}
-  
+
   useProvider(name) {
     Provider.useProvider(name, this);
   }
@@ -131,10 +132,12 @@ class CustomElement {
 
   getValue(path) {
     const [root, ...rest] = path.split(".");
-    const source = this[root] || this.data[root]; // -> root > data   
+    const source = this[root] || this.data[root]; // -> root > data
     if (source && Array.isArray(rest) && rest.length !== 0) {
       const value = rest.reduce((acc, pathItem) => {
-        if (!acc) { return null }
+        if (!acc) {
+          return null;
+        }
         return acc[pathItem];
       }, source);
       return value;
@@ -159,26 +162,24 @@ class CustomElement {
       }, source);
     }
     const target = propsTarget === "props" ? this : this.data;
-    target[root] = arrayNotEmpty(rest) ? {...source}: value;
-    
+    target[root] = arrayNotEmpty(rest) ? { ...source } : value;
   }
   // get all props data
   getTemplateData() {
-    const props = {}
+    const props = {};
     this.properties.map((name) => {
-      props[name] = this.getValue(name)
+      props[name] = this.getValue(name);
     });
-    return {...this.data, ...props};
+    return { ...this.data, ...props };
   }
   // Handle context
   registerSideEffects(func, deps) {
-    
     if (typeof func !== "function") {
       throw `${func} must be a function!`;
     }
     func = func.bind(this);
     // use getTemplate Data;
-    this.$binding.signals.valueChanged.connect(({_, key}) => {
+    this.$binding.signals.valueChanged.connect(({ _, key }) => {
       if (deps.includes(key)) {
         var values = deps.map((dep) => this.getValue(dep));
         func(...values);
@@ -198,14 +199,14 @@ class CustomElement {
     if (!componentConf) {
       return;
     }
-    const cloneConf = cloneDeep(componentConf); 
+    const cloneConf = cloneDeep(componentConf);
     const conf = { ...cloneConf, target, _props_: props };
     console.log(`creating a [${componentConf.is}] node!`);
-    const instanceUUID = uuidv4()
-  const component = new CustomElement(conf);
-  CustomElement.instanceRegistry.set(instanceUUID, component);
-  component.root.instanceUUID = instanceUUID;
-  return component;
+    const instanceUUID = uuidv4();
+    const component = new CustomElement(conf);
+    CustomElement.instanceRegistry.set(instanceUUID, component);
+    component.root.instanceUUID = instanceUUID;
+    return component;
   }
 
   static createFromDirective(name, { ctx, node }) {
@@ -240,8 +241,8 @@ class CustomElement {
   static render(name, target) {
     return CustomElement.createFromNode({
       componentName: name,
-      props: [], // fix should work without props
-      target
+      props: [], // @fix -> should work without props
+      target,
     });
   }
   static getInstance(key) {

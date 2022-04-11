@@ -1,8 +1,9 @@
 import DomDataBinding from "./DomDataBinding";
 import CustomElement from "./CustomElement";
 import Context from "./Context";
-import { parse as templateParser, setRenderedItems, getRenderedItems, renderSection } from "./TemplateHelpers";
+import { setRenderedItems, getRenderedItems, renderSection } from "./TemplateHelpers";
 import { DomDiff, applyPatches, listToFragment } from "./DomDiff";
+import html from "html";
 
 /* counter */
 const getCounter = (function () {
@@ -13,7 +14,6 @@ const getCounter = (function () {
     return `${prefix}_${counter}`;
   };
 })();
-
 
 DomDataBinding.registerDirective("event", {
   init: (ctx, { node, value, modifier }) => {
@@ -27,14 +27,12 @@ DomDataBinding.registerDirective("event", {
 });
 
 DomDataBinding.registerDirective("ref", {
-  init: (ctx, {node, value }) => {
-    
+  init: (ctx, { node, value }) => {
     /*ctx.queued(() => {
       
     });*/
   },
 });
-
 
 DomDataBinding.registerDirective("click", {
   init: function (ctx, { node, value, dataContext }) {
@@ -51,7 +49,7 @@ DomDataBinding.registerDirective("click", {
         if (param === "@event") {
           return event;
         } else {
-          let data = ctx.target.getValue(param)
+          let data = ctx.target.getValue(param);
           if (data === null && dataContext) {
             data = dataContext.lookup(param);
           }
@@ -96,13 +94,15 @@ DomDataBinding.registerDirective("foreach", {
 
     let parentNode = node.parentNode;
     const templateKey = node.dataset.templateKey;
-    
+
     const createListHandler = function (params) {
       return function () {
-        const { ctx, values, preserveTag, sourceVariable, itemKey } = params;
-        let dataList = [], target, savedList = [], previousSection;
+        const { ctx, values, preserveTag } = params;
+        let dataList = [],
+          target,
+          savedList = [],
+          previousSection;
         dataList = ctx.target.data[parentName] || values;
-        console.log("preserveTag", preserveTag)
         if (!dataList) {
           return;
         }
@@ -115,19 +115,16 @@ DomDataBinding.registerDirective("foreach", {
             parentNode.appendChild(option);
           });
         } else {
-          console.log("--- // ---");
-          console.log(dataList);
-          const renderedData = getRenderedItems(templateKey);
+          /* const renderedData = getRenderedItems(templateKey);
           // getList
           const getRederedList = () => {
             return document.querySelectorAll(`[data-template-key='${templateKey}']`);
           };
-
           if (renderedData) {
             previousSection = renderedData.domSection;
-            target = renderedData.placeHolder;// où placer le nouveau noeud
+            target = renderedData.placeHolder; // où placer le nouveau noeud
           }
-          /** place holder */
+        
           let placeHolder = target && target.parentNode ? target : node;
           const emptyPlaceHolder = document.createElement("template");
 
@@ -137,13 +134,12 @@ DomDataBinding.registerDirective("foreach", {
             node,
             localName,
             parentName,
-            preserveTag
+            preserveTag,
           });
           const patches = DomDiff(previousSection, domSection);
           if (!patches) {
             return;
           }
-
           const [patch] = patches;
           if (patch && patch.type === "KEEP_NODE") {
             if (!patch.target.childNodes.length) {
@@ -158,8 +154,8 @@ DomDataBinding.registerDirective("foreach", {
               });
               // why it can be null ?
               const parentnode = placeHolder.parentNode;
-              placeHolder.parentNode.insertBefore(domSection, placeHolder); // fragment -> empty after insertion
-              placeHolder.parentNode.removeChild(placeHolder);
+              parentnode.insertBefore(domSection, placeHolder); // fragment -> empty after insertion
+              parentnode.removeChild(placeHolder);
               savedList = listToFragment(savedList);
               savedList.targetParentNode = parentnode;
               const data = {
@@ -179,9 +175,9 @@ DomDataBinding.registerDirective("foreach", {
               head.parentNode.insertBefore(listPlaceHolder, head);
             }
             applyPatches(patches);
-            console.log("-- apply patches --");
-            console.log(patches);
-            console.log("-----------");
+            //console.log("-- apply patches --");
+            console.log("[PATCH]", patches);
+            //console.log("-----------");
 
             // get the new dom state
             const listAfter = getRederedList();
@@ -198,18 +194,19 @@ DomDataBinding.registerDirective("foreach", {
               placeHolder: listPlaceHolder,
               domSection: savedList,
             };
-           
+
             setRenderedItems(templateKey, data);
-          }
+          }*/
         }
       };
     };
 
-   
-    // |--> handle value changed 
+    // |--> handle value changed
     ctx.signals.valueChanged.connect(({ key, value }) => {
-      if (key !== parentName) { return false; }
-     
+      if (key !== parentName) {
+        return false;
+      }
+
       createListHandler({
         ctx,
         sourceKey: key,
@@ -220,7 +217,9 @@ DomDataBinding.registerDirective("foreach", {
     });
 
     try {
-      const func = () => { return };
+      const func = () => {
+        return;
+      };
       ctx.queued(func);
     } catch (reason) {
       console.log("-- render reason --");
@@ -238,8 +237,10 @@ DomDataBinding.registerDirective("model", {
     const nodeType = node.tagName;
     switch (nodeType) {
       case "TEXTAREA":
-        ctx.signals.dataChanged.connect((dataKey, keyValue) => {
-          node.value = keyValue;
+        ctx.signals.valueChanged.connect(({ key: _key, value: keyValue }) => {
+          if (_key === key) {
+            node.value = keyValue;
+          }
         });
         // handle changed
         node.addEventListener("keyup", (event) => {
@@ -247,10 +248,12 @@ DomDataBinding.registerDirective("model", {
         });
         break;
       case "SELECT":
-        ctx.signals.valueChanged.connect(({key, value:dataValue}) => {
-          if (key !== params.value || dataValue === null) { return }
-           
-          const options = Array.from(node.options).map(option => option.value);
+        ctx.signals.valueChanged.connect(({ key, value: dataValue }) => {
+          if (key !== params.value || dataValue === null) {
+            return;
+          }
+
+          const options = Array.from(node.options).map((option) => option.value);
           const selectedIndex = options.indexOf(dataValue.trim());
           if (selectedIndex !== -1) {
             node.selectedIndex = selectedIndex;
@@ -259,31 +262,28 @@ DomDataBinding.registerDirective("model", {
           // handle change, prevent loop
           node.addEventListener("change", (e) => {
             const prevValue = ctx.target.getValue(key);
-            console.log(`[${e.target.value.trim()} - ${prevValue}]`)
+            console.log(`[${e.target.value.trim()} - ${prevValue}]`);
             if (e.target.value.trim() !== prevValue.trim()) {
               ctx.target.setValue(key, e.target.value);
-             }
+            }
           });
-          
         });
         // handle change
-        
+
         break;
       case "INPUT":
-  
         node.addEventListener(
-            "input",
-            (function (key) {
-              return function (event) {
-                ctx.target.setValue(key, event.target["value"]); //
-              };
-            })(key)
-          );
+          "input",
+          (function (key) {
+            return function (event) {
+              ctx.target.setValue(key, event.target["value"]); //
+            };
+          })(key)
+        );
         break;
       default:
-        const handleValue = ({key, value:dataValue}) => {
-         
-         if (node.textContent === ctx.target.getValue(key)) {
+        const handleValue = ({ key, value: dataValue }) => {
+          if (node.textContent === ctx.target.getValue(key)) {
             return;
           }
           node.textContent = ctx.target.getValue(key);
@@ -293,7 +293,7 @@ DomDataBinding.registerDirective("model", {
           ctx.target.setValue(key, event.target.textContent);
         });
 
-        ctx.signals.valueChanged.connect(handleValue)
+        ctx.signals.valueChanged.connect(handleValue);
     }
   },
 });
@@ -326,8 +326,7 @@ const getValue = (source, path) => {
 
 /* test a special kind of directive */
 DomDataBinding.registerDirective("template:value", {
-  init: function (ctx, { node, value:txtTpl }) {
-    
+  init: function (ctx, { node, value: txtTpl }) {
     const valueHandler = (key, value) => {
       const path = txtTpl.replace("{", "").replace("}", "").split(".");
       const [root] = path;
@@ -349,8 +348,7 @@ DomDataBinding.registerDirective("is", {
 
 // Props directive
 DomDataBinding.registerDirective("props:watcher", {
-  init: function (ctx, { node, value, component, dataContext }) {
-    
+  init: function (ctx, { value, component, dataContext }) {
     ctx.signals.dataChanged.connect((key, val) => {
       if (!component) {
         return null;
@@ -359,6 +357,7 @@ DomDataBinding.registerDirective("props:watcher", {
         component[value.targetProp] = val;
       }
     });
+
     ctx.signals.propsChanged.connect((key, val) => {
       if (key === value.sourceProp) {
         component[value.sourceProp] = val;
@@ -367,11 +366,7 @@ DomDataBinding.registerDirective("props:watcher", {
     // init data context
     if (dataContext) {
       const val = dataContext.lookup(value.sourceProp);
-      setTimeout(() => {
-        // console.log("> value.targetProp >", value.targetProp);
-        component[value.targetProp] = val; // we notify the change here
-      }, 0);
-     
+      component[value.targetProp] = val; // we notify the change here
     }
   },
 });
@@ -382,54 +377,52 @@ DomDataBinding.registerDirective("style", {
    * handle regexp
    * handle css as props/data
    */
-  init: function(ctx, { node, value, component}) {
+  init: function (ctx, { node, value, component }) {
     const { type, name, params } = value;
-      // when props change -> call functions
+    // when props change -> call functions
 
-      const getStyleHandler = function(directiveValue, node) {
-        
-        return function(key, val) {
-          let styleObject = {};
-          if (directiveValue.type !== 'callback') {
-            styleObject = val || {};
-          } else if(key.indexOf(params) !=- 1) {
-            const func = component[name];
-            const _params = params.map((prop) => {
-              return component.getValue(prop);
-            });
-            styleObject = func.call(component, ..._params);
-          }
-          if (styleObject) {
-            Object.entries(styleObject).forEach(([k,v]) => {
-              node.style[k] = v;
-            });
-          }
+    const getStyleHandler = function (directiveValue, node) {
+      return function (key, val) {
+        let styleObject = {};
+        if (directiveValue.type !== "callback") {
+          styleObject = val || {};
+        } else if (key.indexOf(params) != -1) {
+          const func = component[name];
+          const _params = params.map((prop) => {
+            return component.getValue(prop);
+          });
+          styleObject = func.call(component, ..._params);
         }
-      }
+        if (styleObject) {
+          Object.entries(styleObject).forEach(([k, v]) => {
+            node.style[k] = v;
+          });
+        }
+      };
+    };
 
-      const styleHandler = getStyleHandler(value, node);
-     ctx.signals.valueChanged.connect(({ key, value:val }) => {
+    const styleHandler = getStyleHandler(value, node);
+    ctx.signals.valueChanged.connect(({ key, value: val }) => {
       styleHandler(key, val);
-      });
-  }
+    });
+  },
 });
 
 DomDataBinding.registerDirective("value", {
-
-  init: function(ctx, { node, value:directiveName }) {
+  init: function (ctx, { node, value: directiveName }) {
     console.log(" -- radical / mémoire --");
     console.log(ctx, directiveName, node);
-    
+
     // events
-    ctx.signals.valueChanged.connect(({ key, value:val }) => {
-      console.log(key, val);
-      if (key !== directiveName) { return }
+    ctx.signals.valueChanged.connect(({ key, value: val }) => {
+      if (key !== directiveName) {
+        return;
+      }
       // set value
       alert("-- radical blaze --");
       console.log(key, val);
     });
-  }
-})
-
+  },
+});
 
 export {};

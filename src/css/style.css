@@ -13,7 +13,12 @@
 
 body {
   _max-width: max-content;
-  _margin: auto;
+  margin: auto;
+}
+.app-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .main-wrapper {
@@ -171,3 +176,4 @@ label input {
   display: block;
   border: 1px solid red
 }
+

@@ -1,6 +1,5 @@
 import CustomElement from "../../CustomElement";
 
-
 const componentStyle = function (theme) {
   return {
     root: {
@@ -40,7 +39,6 @@ CustomElement.register({
     init: false,
   },
   events: {
-
     onAdd: function (event) {
       const msg = this._createMessage();
     },
@@ -73,16 +71,18 @@ CustomElement.register({
     return `Start at <strong>${start}</strong>end at <strong>${end}</strong>!`;
   },
 
-  onInit: function () { 
+  onInit: function () {
     this.useProvider("contentCtx");
   },
-  
-  onLinked: function() {
-    // alert(`${this.is} - isLinked!`);
- },
 
-  handleContent: function(newContent) {
-    if (!newContent) { return }
+  onLinked: function () {
+    // alert(`${this.is} - isLinked!`);
+  },
+
+  handleContent: function (newContent) {
+    if (!newContent) {
+      return;
+    }
     this.data.contentList = [...this.data.contentList, newContent]; // ajouter $push,$remove
   },
 
@@ -97,12 +97,11 @@ CustomElement.register({
     }
   },
 
-  onMessage: function({type, payload}) {
+  onMessage: function ({ type, payload }) {
     switch (type) {
       case "NEW_CONTENT":
         this.content = payload;
     }
-
   },
 
   getTemplate: function (classes) {
