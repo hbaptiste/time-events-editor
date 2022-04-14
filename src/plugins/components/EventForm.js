@@ -35,11 +35,13 @@ CustomElement.register({
   onLinked: function () {
     // alert(`${this.is} - isLinked!`);
   },
-  _validateEvent: function ({ type, tags }) {
+  _validateEvent: function (event) {
     const errors = [];
-    if (type.trim().length == 0) {
+    if (event.type.trim().length == 0) {
       errors.push("A type must me provided");
     }
+    console.log("duration");
+    console.log(event);
     /*if (!Array.isArray(tags) && tags.length == 0) {
       errors.push("A tag must me provided");
     }*/

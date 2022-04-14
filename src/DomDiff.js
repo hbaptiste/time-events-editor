@@ -60,30 +60,23 @@ const rmEmptyText = (nodes) => {
   });
 };
 
-// ? Comment connaitre l'état final du Dom
-// si changement au niveau des enfants les faire avant
 export default function DomDiff(currentTree, newTree, index, patches = [], parent) {
   if (!currentTree && !newTree) {
     return null;
   }
-  console.clear("-- inside DomDiff --");
   console.log([currentTree, newTree, parent]);
   if (!currentTree && parent) {
-    console.log("-- parent --");
-    console.log(parent);
     patches.push({
       type: "APPEND_NODE",
       target: newTree,
       parentNode: parent,
     });
   } else if (currentTree && !newTree) {
-    console.log("newTree is EMPTY");
-
     // Array.from(currentTree.childNodes).forEach((node) => {
     patches.push({ type: "REMOVE_NODE", target: currentTree });
     // });
   } else if (!currentTree) {
-    patches.push({ type: "KEEP_NODE", target: newTree });
+    patches.push({ type: "CREATE_NODE", target: newTree });
   } else if (currentTree.tagName === newTree.tagName) {
     if (hasChildren(currentTree) && hasChildren(newTree)) {
       const currentTreeArr = rmEmptyText(Array.from(currentTree.childNodes));
@@ -137,10 +130,7 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
           }
         }*/
       }
-      if (currentTreeArr.length > newTreeArr.length) {
-        const nbItems = currentTreeArr.length - newTreeArr.length;
-        //remove
-      }
+
       const zippedChildren = zip(Array.from(currentTreeArr), Array.from(newTreeArr));
       // handle fragment wrapper parent Node
       zippedChildren.forEach(([currentNode, newNode, index]) => {
@@ -156,8 +146,7 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
         });
       }
     } else {
-      console.log("> push node...");
-      patches.push({ type: "KEEP_NODE", target: currentTree });
+      patches.push({ type: "KEEP_NODE", target: currentTree }); //to Test
     }
   } else {
     // replace old by new | f
@@ -177,8 +166,6 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
 
 const fnMap = {
   APPEND_NODE: ({ target, parentNode }) => {
-    console.log(parentNode);
-    parentNode = parentNode.nodeType === 11 && parentNode.targetParentNode ? parentNode.targetParentNode : parentNode;
     parentNode.appendChild(target);
   },
 
@@ -190,15 +177,15 @@ const fnMap = {
     return;
   },
 
-  REPLACE_NODE: () => {
-    return;
+  REPLACE_NODE: ({ source, target }) => {
+    source.parentNode.replaceChild(target, source);
   },
 
   REPLACE_TEXT: ({ newValue, target }) => {
     target.textContent = newValue;
   },
 
-  KEEP_NODE: ({ target }) => target,
+  CREATE_NODE: ({ target }) => target,
 };
 
 // Handle diff

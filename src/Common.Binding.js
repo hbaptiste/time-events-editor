@@ -99,9 +99,8 @@ DomDataBinding.registerDirective("foreach", {
       return function () {
         const { ctx, values, preserveTag } = params;
         let dataList = [],
-          target,
-          savedList = [],
-          previousSection;
+          previousDom = null,
+          emptyPlaceholder = null;
         dataList = ctx.target.data[parentName] || values;
         if (!dataList) {
           return;
@@ -115,19 +114,11 @@ DomDataBinding.registerDirective("foreach", {
             parentNode.appendChild(option);
           });
         } else {
-          /* const renderedData = getRenderedItems(templateKey);
-          // getList
           const getRederedList = () => {
-            return document.querySelectorAll(`[data-template-key='${templateKey}']`);
+            return parentNode.querySelectorAll(`[data-template-key='${templateKey}']`);
           };
-          if (renderedData) {
-            previousSection = renderedData.domSection;
-            target = renderedData.placeHolder; // où placer le nouveau noeud
-          }
-        
-          let placeHolder = target && target.parentNode ? target : node;
-          const emptyPlaceHolder = document.createElement("template");
-
+          // diffing alt
+          /** place holder */
           let domSection = renderSection({
             ctx,
             data: dataList, // values
@@ -136,67 +127,30 @@ DomDataBinding.registerDirective("foreach", {
             parentName,
             preserveTag,
           });
-          const patches = DomDiff(previousSection, domSection);
-          if (!patches) {
+          // node to placeholder
+          if (parentNode.contains(node)) {
+            emptyPlaceholder = document.createElement("template");
+            emptyPlaceholder.dataset.templateKey = templateKey;
+            parentNode.replaceChild(emptyPlaceholder, node);
+          }
+
+          const previousRender = getRederedList();
+          const [firstChild] = previousRender;
+          previousDom = firstChild; // <template> if empty
+
+          if (previousRender.length && firstChild.tagName !== "TEMPLATE") {
+            previousDom = firstChild.parentNode;
+            const wrapper = document.createElement(previousDom.tagName);
+            wrapper.appendChild(domSection);
+            domSection = wrapper;
+          }
+          // do nothing if we have nothing to show
+          if ((!previousDom, domSection.childElementCount == 0)) {
             return;
           }
-          const [patch] = patches;
-          if (patch && patch.type === "KEEP_NODE") {
-            if (!patch.target.childNodes.length) {
-              placeHolder.replaceWith(emptyPlaceHolder);
-              setRenderedItems(templateKey, {
-                placeHolder: emptyPlaceHolder,
-                domSection: null,
-              });
-            } else {
-              Array.from(patch.target.childNodes).forEach((_node) => {
-                savedList.push(_node);
-              });
-              // why it can be null ?
-              const parentnode = placeHolder.parentNode;
-              parentnode.insertBefore(domSection, placeHolder); // fragment -> empty after insertion
-              parentnode.removeChild(placeHolder);
-              savedList = listToFragment(savedList);
-              savedList.targetParentNode = parentnode;
-              const data = {
-                placeHolder,
-                domSection: savedList,
-              };
-              setRenderedItems(templateKey, data);
-            }
-          } else {
-            // Preseve the placeholder
-            let listPlaceHolder;
-            let previousList = getRederedList();
-            if (previousList.length > 0) {
-              // we add placeholder in the list
-              const [head] = previousList;
-              listPlaceHolder = document.createElement("template");
-              head.parentNode.insertBefore(listPlaceHolder, head);
-            }
-            applyPatches(patches);
-            //console.log("-- apply patches --");
-            console.log("[PATCH]", patches);
-            //console.log("-----------");
-
-            // get the new dom state
-            const listAfter = getRederedList();
-            if (listAfter.length > 0) {
-              listPlaceHolder.parentNode.removeChild(listPlaceHolder); // not needed
-            }
-            // if list is null
-            const savedList = listAfter.length ? listToFragment(listAfter) : [];
-
-            if (Array.isArray(savedList) > 0) {
-              savedList.targetParentNode = listAfter[0].parentNode;
-            }
-            const data = {
-              placeHolder: listPlaceHolder,
-              domSection: savedList,
-            };
-
-            setRenderedItems(templateKey, data);
-          }*/
+          const patches = DomDiff(previousDom, domSection); // handle create & remove
+          applyPatches(patches);
+          // -> handle remove and empty <template>
         }
       };
     };
@@ -262,7 +216,6 @@ DomDataBinding.registerDirective("model", {
           // handle change, prevent loop
           node.addEventListener("change", (e) => {
             const prevValue = ctx.target.getValue(key);
-            console.log(`[${e.target.value.trim()} - ${prevValue}]`);
             if (e.target.value.trim() !== prevValue.trim()) {
               ctx.target.setValue(key, e.target.value);
             }
@@ -410,17 +363,11 @@ DomDataBinding.registerDirective("style", {
 
 DomDataBinding.registerDirective("value", {
   init: function (ctx, { node, value: directiveName }) {
-    console.log(" -- radical / mémoire --");
-    console.log(ctx, directiveName, node);
-
     // events
     ctx.signals.valueChanged.connect(({ key, value: val }) => {
       if (key !== directiveName) {
         return;
       }
-      // set value
-      alert("-- radical blaze --");
-      console.log(key, val);
     });
   },
 });

@@ -418,6 +418,7 @@ export default class DomDataBinding {
     allDirectives.map((directive) => {
       try {
         if (directive.name === FOREACH_DIRECTIVE) {
+          console.log("-- n/od/se --");
           setNodeTemplate(node);
         }
         directive.component = params.component;
