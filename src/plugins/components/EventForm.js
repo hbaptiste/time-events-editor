@@ -85,7 +85,7 @@ CustomElement.register({
                 <div class="event-form-control" style="border: 1px solid red">
                     <span class="clsBtn" @click="close">X</span>
                   <div class="fixed">
-                    <tag-editor $title="Event Type" @event:change="_handleType" $item=""></tag-editor>
+                    <tag-editor title="Event Type" @event:change="_handleType" $item=""></tag-editor>
                     <label class="field-label">
                       Event name
                       <input role="event-name" @model="evt.name" class="event-name" /> 

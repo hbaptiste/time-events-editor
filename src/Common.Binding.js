@@ -269,12 +269,10 @@ DomDataBinding.registerDirective("value", {
 
 /* test geValue */
 const getValue = (source, path) => {
-  const value = path.reduce((acc, pathItem) => {
+  return path.reduce((acc, pathItem) => {
     const value = source[pathItem];
     return value;
   }, source);
-
-  return value;
 };
 
 /* test a special kind of directive */
@@ -318,8 +316,7 @@ DomDataBinding.registerDirective("props:watcher", {
     });
     // init data context
     if (dataContext) {
-      const val = dataContext.lookup(value.sourceProp);
-      component[value.targetProp] = val; // we notify the change here
+      component[value.targetProp] = dataContext.lookup(value.sourceProp);
     }
   },
 });

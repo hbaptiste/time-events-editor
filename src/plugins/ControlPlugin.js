@@ -3,6 +3,7 @@ import DomDataBinding from "../DomDataBinding";
 import { timeToDuration } from "../Utils";
 import { selectMessages, selectSpecialPosition } from "./selectors";
 import { cloneDeep } from "lodash";
+import "../plugins/components/SwitchButton";
 
 export default class ControlPlugin {
   constructor(uiManager) {
@@ -132,6 +133,10 @@ export default class ControlPlugin {
           data.displayRowForm = true;
         },
 
+        handleChange: function () {
+          alert("radical blazeoo");
+        },
+
         createNewRow: function ({ data }, e) {
           //prevent from adding the same name
           data.rowTags = [data.newRowName, ...data.rowTags];
@@ -167,13 +172,13 @@ export default class ControlPlugin {
   }
 
   getTemplate() {
-    const eventTpl = `
+    return `
               <div class="root">
                 <button class="newEventBtn" @click="showEventForm">[+]Create Event</button>
+                <switch-button @event:onChange="handleChange" label="strange"></switch-button>
                 <events-viewer @showIf="!displayEventForm" $events="messages"></events-viewer>
                 <event-form style="display:none" @showIf="displayEventForm" $event="event"></event-form>
                </div>
             `;
-    return eventTpl;
   }
 }

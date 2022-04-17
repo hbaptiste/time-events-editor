@@ -330,23 +330,27 @@ export default class DomDataBinding {
   initComponent(componentName, target) {
     /* Créer le composant, l'initialiser, le rendre */
     const attr = Array.from(target.attributes);
-    const props = attr.map(this._parseAttrProps.bind(this)).filter((prop) => {
+    /** wrong: we should merge props */
+    const boundedProps = attr.map(this._parseAttrProps.bind(this)).filter((prop) => {
       return prop.name.startsWith("$");
     });
+    const otherProps = attr.map(this._parseAttrProps.bind(this)).filter((prop) => {
+      return !prop.name.startsWith("$") && !prop.name.startsWith("@") && prop.name !== "style";
+    }); // ne passer que properties
 
+    console.log("-- otherProps --", otherProps);
     // clean-props
-    const cleanProps = props.map((prop) => {
+    const cleanProps = boundedProps.map((prop) => {
       const cloneProp = { ...prop };
       cloneProp.name = cloneProp.name.replace("$", "");
       return cloneProp;
     });
-    const component = CustomElement.createFromNode({
+
+    return CustomElement.createFromNode({
       componentName,
       target,
-      props: cleanProps,
+      props: [...cleanProps, ...otherProps],
     });
-
-    return component;
   }
 
   queued(computation) {

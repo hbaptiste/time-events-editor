@@ -145,6 +145,7 @@ const parseDirectives = function (node = null, keys = []) {
   //.filter(dir => keys.indexOf(dir.name) !== -1)
   return directives;
 };
+
 /* parseAttributes */
 const parseAttributes = function (node) {
   const attributes = Array.from(node.attributes);

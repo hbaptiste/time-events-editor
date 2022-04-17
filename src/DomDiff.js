@@ -64,7 +64,6 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
   if (!currentTree && !newTree) {
     return null;
   }
-  console.log([currentTree, newTree, parent]);
   if (!currentTree && parent) {
     patches.push({
       type: "APPEND_NODE",

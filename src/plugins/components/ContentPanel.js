@@ -76,7 +76,7 @@ CustomElement.register({
   },
 
   onLinked: function () {
-    // alert(`${this.is} - isLinked!`);
+    //alert(`${this.is} - isLinked!`);
   },
 
   handleContent: function (newContent) {
@@ -110,7 +110,7 @@ CustomElement.register({
                 <ul class="main-list-wrapper">
                     <li class="${classes.list}" @click="onRemove($event, t)" km:foreach="t in contentList">
                         <p class="${classes.paragraph}">
-                            mon titre->{title}
+                            mon titre -> {title}
                         </p>
                         <p>duration { t.duration | handleDuration }</p>
                         <p><em>Type : {t.type}</em>!</p>

@@ -1,22 +1,20 @@
 import CustomElement from "../../CustomElement";
 
-
 CustomElement.register({
-    
-    is: "content-viewer",
-    
-    properties:["content"],
+  is: "content-viewer",
 
-    onInit: function() {
-        console.log("-- onInit --");
-    },
+  properties: ["content"],
 
-    onLinked: function() {
-        // alert(`${this.is} - isLinked!`);
-    },
+  onInit: function () {
+    console.log("-- onInit --");
+  },
 
-    getTemplate: function() {
-        return `<template>
+  onLinked: function () {
+    // alert(`${this.is} - isLinked!`);
+  },
+
+  getTemplate: function () {
+    return `<template>
             <div style="width: 500px; min-height:600px">
                 <div>Fin du Magister d'Annie Ernaux au collège de France</div>
                 <div>
@@ -28,9 +26,7 @@ CustomElement.register({
                     <span><strong>Auteurs</strong></span>
                     <div>Fin du Magister d'Annie Ernaux au collège de France</div>
                 </div>
-
             </div>
-        </template>`
-    }
-
+        </template>`;
+  },
 });
