@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  start     String   @db.Char(10)
+  end       String   @db.Char(10)
+  content   Content? // backref
+}
+
+model Content {
+  id               Int            @id @default(autoincrement())
+  event            Event?         @relation(fields: [eventId], references: [id])
+  eventId          Int?           @unique
+  value            String
+  fromRelationShip RelationShip[] @relation("FromRef")
+  toRelationShip   RelationShip[] @relation("TargetRef")
+
+}
+
+// replace by relationship by links (from/to)
+model RelationShip {
+  id       Int     @id @default(autoincrement())
+  source   Content @relation("FromRef", fields: [sourceId], references: [id])
+  sourceId Int
+  verb     String
+  target   Content @relation("TargetRef", fields: [targetId], references: [id])
+  targetId Int
+}

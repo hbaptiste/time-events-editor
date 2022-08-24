@@ -336,9 +336,8 @@ export default class DomDataBinding {
     });
     const otherProps = attr.map(this._parseAttrProps.bind(this)).filter((prop) => {
       return !prop.name.startsWith("$") && !prop.name.startsWith("@") && prop.name !== "style";
-    }); // ne passer que properties
+    }); //@tofix ne passer que properties
 
-    console.log("-- otherProps --", otherProps);
     // clean-props
     const cleanProps = boundedProps.map((prop) => {
       const cloneProp = { ...prop };
@@ -448,12 +447,13 @@ export default class DomDataBinding {
       value: nodeValue,
     };
     /* we should deal with callbacks */
-    /* child can know what to uses */
+    /* child can know what to use */
     if (name.startsWith("$")) {
-      // const cleanedName = name.replace("$", "");
       const value = this.target.data[nodeValue] || this.target[nodeValue];
       props.value = value || this.target.events[nodeValue]; //handle type
     }
+    console.log("-- props --");
+    console.log(props);
     return props;
   }
 }

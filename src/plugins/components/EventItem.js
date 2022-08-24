@@ -1,5 +1,5 @@
 import CustomElement from "../../CustomElement";
-import { toMillisec, parseTime } from "../../Utils";
+import { toMillisec } from "../../Utils";
 
 CustomElement.register({
   is: "event-item",
@@ -29,7 +29,7 @@ CustomElement.register({
   },
 
   onLinked: function () {
-    // alert(`${this.is} - isLinked!`);
+    console.log(`${this.is} - isLinked!`);
   },
 
   declareSideEffects: function () {
@@ -92,7 +92,7 @@ CustomElement.register({
         const [start] = this.event;
         if (start === payload.position) {
           this.data.selected = true;
-          this.$injected.updateContent(this.item); //publish content updated ?
+          this.$injected.updateContent(this.item); // publish content updated ?
         }
         break;
       case "END_EVENT":
@@ -112,7 +112,7 @@ CustomElement.register({
   getTemplate: function () {
     return `
             <template>
-                <p @style="itemStyle">{item.type} [{item.duration}]</p>
+                <p class="event-item" @style="itemStyle"></p>
             </template>
         `;
   },

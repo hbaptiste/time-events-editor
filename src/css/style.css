@@ -10,6 +10,9 @@
 .color-4 {
   background: yellow;
 }
+.color-gray {
+  background: #f5f6f8
+} 
 
 body {
   _max-width: max-content;
@@ -26,8 +29,9 @@ body {
   width: auto;/*500px;*/
   display: flex;
   justify-content: space-evenly;
-  border: 1px solid blue;
+  border: 1px solid rgb(239, 239, 241);
   height: auto;
+  background-color: white;
 }
 .component {
   margin-bottom: 3px;
@@ -52,6 +56,7 @@ body {
 }
 .events-container {
   background-color: white;
+  border: 2px solid #e5e5e5;
 }
 .events-container .row {
   position: absolute;
@@ -124,8 +129,9 @@ body {
   float: left;
   width: 13%;
   left: -70px;
-  top: -15px;
-  text-align: right;
+  tsop: -15px;
+  text-align: center;
+
 }
 
 .main-time-indicator {
@@ -141,7 +147,7 @@ body {
 }
 .event-item-container {
   position: relative;
-  border: 1px solid salmon;
+  border-bottom: 1px solid #e5e5e5;
   width: 500px;
   height: 50px;
 }
@@ -234,3 +240,32 @@ label input {
 .switch .slider.round:before {
   border-radius: 50%;
 }
+.main-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  padding: 20px
+}
+.main-list-wrapper .category {
+  border: 1px solid #dddddd;
+  cursor: pointer;
+  opacity: 0.8;
+  padding: 5px 15px 5px 15px;
+  border-radius: 1.6rem;
+  margin-right: 5px;
+  float: right;
+}
+.main-list-wrapper .content-item {
+    background-color: white;
+    padding: 10px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
+    --box-shadow: rgba(17, 17, 26, 0.05) 0px 1px 0px, rgba(17, 17, 26, 0.1) 0px 0px 5px;
+    --box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
+    --box-shadow: rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, rgba(9, 30, 66, 0.08) 0px 0px 0px 1px;
+}
+.content-panel {
+  padding-left: 20px
+}
+.event-item {top:20px}

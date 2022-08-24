@@ -396,6 +396,7 @@ const renderSection = function ({ ctx, node, data }) {
   }*/
   const rootCtx = new Context(ctx.target.getTemplateData());
   const ast = parseSection(node);
+  console.log("ast-->", ast, "<--ast");
   if (!ast) {
     throw "ParsingError";
   }
@@ -618,7 +619,7 @@ const compile = function (ast, domBindingCtx) {
       case "element":
         switch (node.name) {
           case "TEXT":
-            const textStm = (function (_node_) {
+            return (function (_node_) {
               return function () {
                 const element = document.createDocumentFragment(); // tochange
                 const { tokens } = parseTextNodeExpressions(node.value);
@@ -642,9 +643,8 @@ const compile = function (ast, domBindingCtx) {
                 return document.createTextNode(textCtn);
               };
             })(node);
-            return textStm;
           default:
-            const defaultStm = (function (_node_) {
+            return (function (_node_) {
               return function () {
                 const element = document.createElement(_node_.name);
                 const children = _node_.children.map(genCode) || [];
@@ -668,28 +668,29 @@ const compile = function (ast, domBindingCtx) {
                 return element;
               };
             })(node);
-            return defaultStm;
         }
       case "fragment":
         let stmFrag = "";
-        //if (node.isRoot) {
-        stmFrag = (function (_node_) {
-          return function (root) {
-            const rootFrag = document.createDocumentFragment();
-            const transformed = root.children.map(genCode) || [];
-            transformed.map((childFnc) => {
-              const child = childFnc();
-              _node_.attributes.forEach((attr) => {
-                if (attr.value) {
-                  child.setAttribute(attr.name, attr.value);
-                }
+        if (node.isRoot) {
+          stmFrag = (function (_node_) {
+            return function (root) {
+              const rootFrag = document.createDocumentFragment();
+              console.log("-- root --");
+              console.log(root);
+              const transformed = root.children.map(genCode) || [];
+              transformed.map((childFnc) => {
+                const child = childFnc();
+                _node_.attributes.forEach((attr) => {
+                  if (attr.value) {
+                    child.setAttribute(attr.name, attr.value);
+                  }
+                });
+                rootFrag.appendChild(child);
               });
-              rootFrag.appendChild(child);
-            });
-            return rootFrag;
-          };
-        })(node);
-        /*} else {
+              return rootFrag;
+            };
+          })(node);
+        } else {
           stmFrag = (function (_node_) {
             return function (root) {
               const children = node.children;
@@ -706,10 +707,10 @@ const compile = function (ast, domBindingCtx) {
               });
               return frag;
             };
-          })(node); 
+          })(node);
 
           return stmFrag;
-        }*/
+        }
         stm.push(stmFrag);
         break;
       default:
@@ -720,9 +721,8 @@ const compile = function (ast, domBindingCtx) {
   const code = genCode(ast);
   try {
     return code(ast);
-  } catch (e) {
-    console.log("--- error ---");
-    console.log(e);
+  } catch (reason) {
+    console.log(reason.message);
   }
 };
 

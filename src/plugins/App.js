@@ -8,9 +8,11 @@ import { messages } from "../fixtures";
 /**
  * to do :
  * - ref on elements
+ * - ref api
  * - handle list / debug list
  * - debug selector
  * - Decorator ?
+ * - dynamic content ? create content
  */
 
 CustomElement.register({
@@ -83,18 +85,31 @@ CustomElement.register({
     this.data.isPlayerReady = true;
   },
 
+  //export a api via ref
+  getRefApi: function () {
+    return "componentApi";
+  },
+
+  events: {
+    _handleItemSelection: function (evt) {
+      console.log("-- evt --");
+      console.log(evt);
+    },
+  },
+
   getTemplate: function () {
     return `
         <template>
             <div class="main-wrapper">
-                <div style="float: left; border: 1px salmon" style="width: 500px; height: 360px">
+                <div style="" style="width: 500px; height: 360px">
                     <video id="mainvideo_html5_api" class="vjs-tech" controls preload="true" poster="http://www.college-de-france.fr/video/yanick-lahens/2019/lahens-20190603_thumb.jpg">
                         <source src="http://www.college-de-france.fr/video/yanick-lahens/2019/lahens-20190603.mp4" type="video/mp4"/>
                     </video>
+                    <content-editor/>
                     <div class="controls-wrapper" style="margin-bottom: 3px; background:white; width:500px"></div>
                     <div id="eventContainer" class="component events-container"></div>
                 </div>
-                <content-panel style="float:left" @showIf="displayEventsList" title="Radical blaze title!" @onSelect="_handleItemSelection"></content-panel>
+                <content-panel @showIf="displayEventsList" $onselect="_handleItemSelection">s</content-panel>
                 <div style="clear:both"></div>
               </div>
         </template>`;

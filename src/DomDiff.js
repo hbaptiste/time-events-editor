@@ -119,15 +119,6 @@ export default function DomDiff(currentTree, newTree, index, patches = [], paren
           currentTreeArr.splice(i, 0, data); // paste
           patches.push({ type: "MOVE_NODE", target: newItem, at: i });
         }
-        // handle adjacent item
-        /*if (newItemKey == getItemKey(currentTreeArr[i + 1])) {
-            patches.push({ type: "REMOVE_NODE", target: newItem, at: i });
-            currentTreeArr.splice(i, 1);
-          } else {
-            patches.push({ type: "ORDER_NODE", target: newItem, at: i });
-            currentTreeArr.splice(i, 0, currentTreeArr[curPosition]);
-          }
-        }*/
       }
 
       const zippedChildren = zip(Array.from(currentTreeArr), Array.from(newTreeArr));
@@ -167,7 +158,9 @@ const fnMap = {
   APPEND_NODE: ({ target, parentNode }) => {
     parentNode.appendChild(target);
   },
-
+  KEEP_NODE: ({ target }) => {
+    return target;
+  },
   REMOVE_NODE: ({ target }) => {
     target.parentNode.removeChild(target);
   },

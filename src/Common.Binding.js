@@ -22,6 +22,7 @@ DomDataBinding.registerDirective("event", {
     if (typeof callback !== "function") {
       throw `@event:${eventName} -> callback must be a function!`;
     }
+
     node.addEventListener(eventName, callback.bind(ctx.target));
   },
 });
@@ -127,6 +128,9 @@ DomDataBinding.registerDirective("foreach", {
             parentName,
             preserveTag,
           });
+          console.log("-- dom section --");
+          console.log(domSection);
+          console.log("-- radical blaze--");
           // node to placeholder
           if (parentNode.contains(node)) {
             emptyPlaceholder = document.createElement("template");
@@ -149,6 +153,8 @@ DomDataBinding.registerDirective("foreach", {
             return;
           }
           const patches = DomDiff(previousDom, domSection); // handle create & remove
+          console.log("-- patches --");
+          console.log(patches);
           applyPatches(patches);
           // -> handle remove and empty <template>
         }

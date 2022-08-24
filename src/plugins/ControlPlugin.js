@@ -50,7 +50,7 @@ export default class ControlPlugin {
         const contentUpdater = (lastContent) => {
           // messages from --> deal with update after
           this.data.content = lastContent;
-          this.$store.emit({ type: "", payload: lastContent });
+          this.$store.emit({ type: "NEW_SELECTED_CONTENT", payload: lastContent });
         };
 
         const registerEvent = (event) => {

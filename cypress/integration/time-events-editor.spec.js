@@ -15,6 +15,9 @@ describe("Testing cypress", () => {
   });
 
   it("Should create events", () => {
-    cy.createEvent({ name: "test", tag: 3, start: "00:01:00", end: "00:05:00", detail: "This is my detail" });
+    cy.createEvent({ name: "test", tag: 1, start: "00:01:00", end: "00:05:00", detail: "This is my detail" });
+    //cy.createEvent({ name: "test", tag: 1, start: "00:01:00", end: "00:05:00", detail: "This is my detail" });
+    s;
+    cy.get("#mainvideo_html5_api").should("have.length", 1);
   });
 });

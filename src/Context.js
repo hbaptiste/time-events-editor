@@ -22,11 +22,7 @@ export default class Context {
     while (keyName.length > 0) {
       const localKey = keyName.shift();
       const firstCall = !localData ? true : false;
-      if (
-        firstCall &&
-        !this.data.hasOwnProperty(localKey) &&
-        this.ctxParent !== null
-      ) {
+      if (firstCall && !this.data.hasOwnProperty(localKey) && this.ctxParent !== null) {
         return this.ctxParent.lookup(key);
       }
       localData = !localData ? this.data[localKey] : localData[localKey];
@@ -37,7 +33,7 @@ export default class Context {
     return localData;
   }
   extends(props) {
-    this.data = {...this.data,...props};
+    this.data = { ...this.data, ...props };
   }
 
   clear() {
